@@ -2,26 +2,34 @@
 
 A production-oriented **SaaS backend for a service booking platform**, built with FastAPI and PostgreSQL.
 
-The project is being developed incrementally with a focus on **backend engineering, API design, authentication, database architecture, testing, containerization, and DevOps practices**.
+The project is being developed incrementally with a focus on **backend engineering, API design, authentication, authorization, database architecture, testing, containerization, and DevOps practices**.
 
 ---
 
 ## 🚀 Project Status
 
-**Current Stage: Stage 3 — Authentication ✅**
+**Current Stage: Stage 5 — Services / Service CRUD ✅**
 
 Implemented:
 
+* FastAPI application
+* PostgreSQL persistence
+* SQLAlchemy ORM
+* Alembic database migrations
 * User registration
 * Secure password hashing using Argon2
 * JWT-based authentication
 * User login
 * Protected `/auth/me` endpoint
-* PostgreSQL persistence
-* SQLAlchemy ORM
-* Alembic database migrations
-* Authentication unit tests
-* Authentication API integration tests
+* User roles: Customer, Provider, Admin
+* Role-based access control
+* Service model and database migration
+* Service creation, retrieval, update, and deletion
+* Provider ownership enforcement
+* Admin service management
+* Service input validation
+* Protected service endpoints
+* Automated authentication, security, RBAC, and service tests
 * Dockerized PostgreSQL
 
 The project is actively under development.
@@ -32,25 +40,25 @@ The project is actively under development.
 
 ```text
                         ┌──────────────────┐
-                        │     Client       │
-                        │ Swagger / REST   │
+                        │      Client      │
+                        │  Swagger / REST  │
                         └────────┬─────────┘
                                  │
                                  ▼
                         ┌──────────────────┐
-                        │    FastAPI       │
-                        │   API Layer      │
+                        │     FastAPI      │
+                        │     API Layer    │
                         └────────┬─────────┘
                                  │
-                  ┌──────────────┼──────────────┐
-                  │              │              │
-                  ▼              ▼              ▼
-             ┌─────────┐   ┌──────────┐   ┌──────────┐
-             │ Schemas │   │ Services │   │ Security │
-             │ Pydantic│   │ Business │   │ JWT/Auth │
-             └─────────┘   └──────────┘   └──────────┘
-                                 │
-                                 ▼
+                 ┌───────────────┼───────────────┐
+                 │               │               │
+                 ▼               ▼               ▼
+          ┌────────────┐  ┌────────────┐  ┌────────────┐
+          │  Schemas   │  │  Services  │  │  Security  │
+          │  Pydantic  │  │  Business  │  │  JWT/RBAC  │
+          └────────────┘  └────────────┘  └────────────┘
+                                  │
+                                  ▼
                         ┌──────────────────┐
                         │    SQLAlchemy    │
                         │       ORM        │
@@ -58,7 +66,7 @@ The project is actively under development.
                                  │
                                  ▼
                         ┌──────────────────┐
-                        │   PostgreSQL     │
+                        │    PostgreSQL    │
                         │     Database     │
                         └──────────────────┘
 ```
@@ -88,6 +96,7 @@ The project is actively under development.
 * `python-jose`
 * Argon2 password hashing
 * `pwdlib`
+* Role-based access control
 
 ### Testing
 
@@ -114,7 +123,9 @@ saas-backend/
 │   │   ├── dependencies.py
 │   │   └── routes/
 │   │       ├── __init__.py
-│   │       └── auth.py
+│   │       ├── auth.py
+│   │       ├── roles.py
+│   │       └── services.py
 │   │
 │   ├── core/
 │   │   ├── config.py
@@ -127,12 +138,15 @@ saas-backend/
 │   │
 │   ├── models/
 │   │   └── user.py
+│   │   └── service.py
 │   │
 │   ├── schemas/
 │   │   └── user.py
+│   │   └── service.py
 │   │
 │   ├── services/
 │   │   └── user.py
+│   │   └── service.py
 │   │
 │   └── main.py
 │
@@ -141,7 +155,9 @@ saas-backend/
 │
 ├── tests/
 │   ├── test_auth.py
-│   └── test_security.py
+│   ├── test_roles.py
+│   ├── test_security.py
+│   └── test_services.py
 │
 ├── .env
 ├── .gitignore
@@ -225,9 +241,132 @@ Authorization: Bearer <JWT>
 
 ---
 
+## 👥 Role-Based Access Control
+
+Bookify currently supports three user roles:
+
+* **Customer**
+* **Provider**
+* **Admin**
+
+Protected endpoints use the authenticated user's role to determine authorization.
+
+### Role endpoints
+
+```http
+GET /roles/customer
+GET /roles/provider
+GET /roles/admin
+```
+
+Users attempting to access an endpoint requiring a different role receive:
+
+```http
+403 Forbidden
+```
+
+---
+
+## 🧾 Services
+
+Services represent bookable offerings within the platform.
+
+Each service contains:
+
+* Name
+* Description
+* Price
+* Duration in minutes
+* Owner/provider ID
+* Creation timestamp
+* Update timestamp
+
+### Create Service
+
+```http
+POST /services
+```
+
+Only **Providers and Admins** can create services.
+
+Example request:
+
+```json
+{
+  "name": "Premium Haircut",
+  "description": "Haircut with styling",
+  "price": 799.00,
+  "duration_minutes": 45
+}
+```
+
+---
+
+### List Services
+
+```http
+GET /services
+```
+
+Authenticated users can retrieve available services.
+
+---
+
+### Get Service
+
+```http
+GET /services/{service_id}
+```
+
+Returns a specific service.
+
+A non-existent service returns:
+
+```http
+404 Not Found
+```
+
+---
+
+### Update Service
+
+```http
+PATCH /services/{service_id}
+```
+
+Authorization rules:
+
+* Providers can update their own services.
+* Providers cannot update another provider's service.
+* Admins can update services owned by other providers.
+* Customers cannot update services.
+
+---
+
+### Delete Service
+
+```http
+DELETE /services/{service_id}
+```
+
+Authorization rules:
+
+* Providers can delete their own services.
+* Providers cannot delete another provider's service.
+* Admins can delete services owned by other providers.
+* Customers cannot delete services.
+
+Unauthorized operations return:
+
+```http
+403 Forbidden
+```
+
+---
+
 ## 🧪 Testing
 
-The project currently contains unit and API integration tests covering authentication and security.
+The project contains automated tests covering authentication, security, role-based authorization, and service CRUD functionality.
 
 Run the complete test suite:
 
@@ -238,10 +377,12 @@ python -m pytest
 Current test status:
 
 ```text
-13 passed
+40 passed
 ```
 
 Test coverage currently includes:
+
+### Security
 
 * Password hashing
 * Password verification
@@ -249,12 +390,43 @@ Test coverage currently includes:
 * JWT creation
 * JWT decoding
 * Invalid JWT handling
+
+### Authentication
+
 * User registration
 * Duplicate email registration
-* Login success
+* Successful login
 * Invalid login credentials
 * Protected endpoint authentication
+* Current-user retrieval
 * Authentication failure scenarios
+
+### Role-Based Authorization
+
+* Customer role access
+* Provider role access
+* Admin role access
+* Unauthorized role access
+* Authentication requirements
+
+### Service CRUD
+
+* Provider service creation
+* Customer creation rejection
+* Service listing
+* Service retrieval
+* Non-existent service handling
+* Provider updating own service
+* Provider updating another provider's service rejection
+* Admin updating another provider's service
+* Provider deleting own service
+* Provider deleting another provider's service rejection
+* Admin deleting another provider's service
+* Customer update/delete rejection
+* Service price validation
+* Service duration validation
+* Required field validation
+* Service authentication requirements
 
 ---
 
@@ -374,6 +546,7 @@ The project will evolve into a complete SaaS booking platform.
 * SQLAlchemy
 * Alembic
 * Database configuration
+* User database model
 
 ### Stage 3 — Authentication ✅
 
@@ -381,17 +554,32 @@ The project will evolve into a complete SaaS booking platform.
 * Password hashing
 * JWT authentication
 * Login
-* Protected endpoints
+* Protected `/auth/me` endpoint
 * Authentication tests
 
-### Stage 4 — Service Management 🚧
+### Stage 4 — Roles & Authorization ✅
 
-* Service/provider models
-* Service CRUD APIs
-* Provider management
+* Customer role
+* Provider role
+* Admin role
 * Role-based authorization
+* Protected role endpoints
+* Authorization tests
 
-### Stage 5 — Booking System
+### Stage 5 — Services / Service CRUD ✅
+
+* Service model
+* Service schemas
+* Service database migration
+* Service CRUD service layer
+* Service API routes
+* Provider ownership enforcement
+* Admin service management
+* Role-based authorization for services
+* Service validation
+* Service CRUD tests
+
+### Stage 6 — Booking System
 
 * Booking model
 * Availability management
@@ -399,7 +587,7 @@ The project will evolve into a complete SaaS booking platform.
 * Booking cancellation
 * Booking status management
 
-### Stage 6 — Production Engineering
+### Stage 7 — Production Engineering
 
 * Redis
 * Background jobs
@@ -408,7 +596,7 @@ The project will evolve into a complete SaaS booking platform.
 * Configuration management
 * Health/readiness checks
 
-### Stage 7 — DevOps & Cloud
+### Stage 8 — DevOps & Cloud
 
 * CI/CD with GitHub Actions
 * Docker image
@@ -427,7 +615,10 @@ This project is designed to demonstrate practical experience with:
 * REST API development
 * Backend architecture
 * Authentication and authorization
+* Role-based access control
 * Relational database design
+* SQLAlchemy ORM
+* Database migrations
 * Secure credential handling
 * Automated testing
 * Docker
