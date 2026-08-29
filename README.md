@@ -8,7 +8,7 @@ The project is being developed incrementally with a focus on **backend engineeri
 
 ## 🚀 Project Status
 
-**Current Stage: Stage 5 — Services / Service CRUD ✅**
+**Current Stage: Stage 6 — Booking System ✅**
 
 Implemented:
 
@@ -28,9 +28,27 @@ Implemented:
 * Provider ownership enforcement
 * Admin service management
 * Service input validation
-* Protected service endpoints
-* Automated authentication, security, RBAC, and service tests
+* Booking model and database migration
+* Customer booking creation
+* Service availability validation
+* Overlapping booking prevention
+* Booking retrieval with role-based filtering
+* Customer booking access restrictions
+* Provider booking access restrictions
+* Admin booking access
+* Booking status transitions
+* Customer booking cancellation
+* Provider booking confirmation, completion, and cancellation
+* Admin booking status management
+* Invalid booking status transition protection
+* Automated authentication, security, RBAC, service, and booking tests
 * Dockerized PostgreSQL
+
+**Current automated test status:**
+
+```text
+52 passed
+```
 
 The project is actively under development.
 
@@ -39,36 +57,36 @@ The project is actively under development.
 ## 🏗️ Architecture
 
 ```text
-                        ┌──────────────────┐
-                        │      Client      │
-                        │  Swagger / REST  │
-                        └────────┬─────────┘
-                                 │
-                                 ▼
-                        ┌──────────────────┐
-                        │     FastAPI      │
-                        │     API Layer    │
-                        └────────┬─────────┘
-                                 │
-                 ┌───────────────┼───────────────┐
-                 │               │               │
-                 ▼               ▼               ▼
-          ┌────────────┐  ┌────────────┐  ┌────────────┐
-          │  Schemas   │  │  Services  │  │  Security  │
-          │  Pydantic  │  │  Business  │  │  JWT/RBAC  │
-          └────────────┘  └────────────┘  └────────────┘
+                         ┌──────────────────┐
+                         │      Client      │
+                         │   Swagger / REST │
+                         └────────┬─────────┘
                                   │
                                   ▼
-                        ┌──────────────────┐
-                        │    SQLAlchemy    │
-                        │       ORM        │
-                        └────────┬─────────┘
-                                 │
-                                 ▼
-                        ┌──────────────────┐
-                        │    PostgreSQL    │
-                        │     Database     │
-                        └──────────────────┘
+                         ┌──────────────────┐
+                         │     FastAPI      │
+                         │     API Layer    │
+                         └────────┬─────────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+              ▼                   ▼                   ▼
+       ┌────────────┐      ┌────────────┐      ┌────────────┐
+       │  Schemas   │      │  Services  │      │  Security  │
+       │  Pydantic  │      │  Business  │      │  JWT/RBAC  │
+       └────────────┘      └──────┬─────┘      └────────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │    SQLAlchemy    │
+                         │       ORM        │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │    PostgreSQL    │
+                         │     Database     │
+                         └──────────────────┘
 ```
 
 ---
@@ -125,29 +143,39 @@ saas-backend/
 │   │       ├── __init__.py
 │   │       ├── auth.py
 │   │       ├── roles.py
-│   │       └── services.py
+│   │       ├── services.py
+│   │       └── bookings.py
 │   │
 │   ├── core/
+│   │   ├── __init__.py
 │   │   ├── config.py
 │   │   └── security.py
 │   │
 │   ├── db/
+│   │   ├── __init__.py
 │   │   ├── base.py
 │   │   ├── database.py
 │   │   └── dependencies.py
 │   │
 │   ├── models/
-│   │   └── user.py
-│   │   └── service.py
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── service.py
+│   │   └── booking.py
 │   │
 │   ├── schemas/
-│   │   └── user.py
-│   │   └── service.py
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── service.py
+│   │   └── booking.py
 │   │
 │   ├── services/
-│   │   └── user.py
-│   │   └── service.py
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── service.py
+│   │   └── booking.py
 │   │
+│   ├── __init__.py
 │   └── main.py
 │
 ├── alembic/
@@ -157,7 +185,8 @@ saas-backend/
 │   ├── test_auth.py
 │   ├── test_roles.py
 │   ├── test_security.py
-│   └── test_services.py
+│   ├── test_services.py
+│   └── test_bookings.py
 │
 ├── .env
 ├── .gitignore
@@ -232,8 +261,6 @@ GET /auth/me
 ```
 
 Requires a valid JWT bearer token.
-
-Example:
 
 ```http
 Authorization: Bearer <JWT>
@@ -364,23 +391,135 @@ Unauthorized operations return:
 
 ---
 
+## 📅 Booking System
+
+Bookings connect customers with provider services at a specific date and time.
+
+Each booking contains:
+
+* Customer ID
+* Service ID
+* Booking date
+* Start time
+* End time
+* Booking status
+* Creation timestamp
+* Update timestamp
+
+### Create Booking
+
+```http
+POST /bookings
+```
+
+Only **Customers** can create bookings.
+
+Example request:
+
+```json
+{
+  "service_id": 1,
+  "booking_date": "2026-09-05",
+  "start_time": "10:00:00"
+}
+```
+
+The booking end time is calculated automatically from the service duration.
+
+New bookings start with:
+
+```text
+pending
+```
+
+---
+
+### Booking Availability
+
+Bookify prevents overlapping bookings for the same service.
+
+Attempting to create a booking for an already occupied time slot returns:
+
+```http
+400 Bad Request
+```
+
+Example:
+
+```json
+{
+  "detail": "Service is already booked for this time"
+}
+```
+
+---
+
+### Booking Retrieval
+
+Bookings can be retrieved through protected endpoints with role-aware filtering.
+
+The system enforces access according to the authenticated user's role:
+
+* Customers can retrieve their own bookings.
+* Providers can retrieve bookings associated with their services.
+* Admins can access bookings across the platform.
+
+---
+
+### Booking Status Management
+
+Bookings support controlled status transitions.
+
+Supported statuses include:
+
+```text
+pending
+confirmed
+completed
+cancelled
+```
+
+Status changes are exposed through:
+
+```http
+PATCH /bookings/{booking_id}/status
+```
+
+Authorization rules include:
+
+* Customers can cancel their bookings.
+* Providers can confirm bookings.
+* Providers can complete confirmed bookings.
+* Providers can cancel bookings.
+* Admins can change booking status.
+* Customers cannot confirm or complete bookings.
+* Invalid status transitions are rejected.
+
+For example, a completed booking cannot be changed to cancelled:
+
+```http
+400 Bad Request
+```
+
+This prevents invalid states from entering the booking workflow.
+
+---
+
 ## 🧪 Testing
 
-The project contains automated tests covering authentication, security, role-based authorization, and service CRUD functionality.
+The project contains automated tests covering authentication, security, role-based authorization, service CRUD, booking creation, booking retrieval, availability, and booking status management.
 
 Run the complete test suite:
 
 ```bash
-python -m pytest
+python -m pytest -v
 ```
 
 Current test status:
 
 ```text
-40 passed
+52 passed
 ```
-
-Test coverage currently includes:
 
 ### Security
 
@@ -427,6 +566,21 @@ Test coverage currently includes:
 * Service duration validation
 * Required field validation
 * Service authentication requirements
+
+### Booking System
+
+* Customer booking creation
+* Provider booking creation rejection
+* Booking authentication requirements
+* Non-existent service handling
+* Overlapping booking rejection
+* Provider booking confirmation
+* Provider booking completion
+* Completed booking transition protection
+* Customer booking cancellation
+* Customer status-change restriction
+* Provider booking cancellation
+* Admin booking status management
 
 ---
 
@@ -485,7 +639,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Start the PostgreSQL container:
+Start PostgreSQL:
 
 ```bash
 docker compose up -d
@@ -515,13 +669,13 @@ http://127.0.0.1:8000
 
 FastAPI automatically provides interactive API documentation.
 
-Swagger UI:
+### Swagger UI
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-ReDoc:
+### ReDoc
 
 ```text
 http://127.0.0.1:8000/redoc
@@ -579,20 +733,27 @@ The project will evolve into a complete SaaS booking platform.
 * Service validation
 * Service CRUD tests
 
-### Stage 6 — Booking System
+### Stage 6 — Booking System ✅
 
 * Booking model
-* Availability management
+* Booking schemas
+* Booking database migration
 * Booking creation
+* Service availability validation
+* Overlapping booking prevention
+* Booking retrieval
+* Role-based booking filtering
 * Booking cancellation
 * Booking status management
+* Status transition validation
+* Booking automated tests
 
 ### Stage 7 — Production Engineering
 
 * Redis
 * Background jobs
 * Structured logging
-* Error handling
+* Centralized error handling
 * Configuration management
 * Health/readiness checks
 

@@ -1,10 +1,15 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.booking import Booking
+    from app.models.user import User
 
 
 class Service(Base):
@@ -35,6 +40,11 @@ class Service(Base):
         nullable=False,
     )
 
+    owner: Mapped["User"] = relationship(
+    	"User",
+    	back_populates="services",
+    )
+
     owner_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"),
         nullable=False,
@@ -53,3 +63,9 @@ class Service(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+    bookings: Mapped[list["Booking"]] = relationship(
+    	"Booking",
+    	back_populates="service",
+    )
+

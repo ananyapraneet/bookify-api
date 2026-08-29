@@ -1,10 +1,15 @@
 from datetime import datetime, timezone
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum as SQLEnum, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.booking import Booking
+    from app.models.service import Service
 
 
 class UserRole(str, Enum):
@@ -53,4 +58,14 @@ class User(Base):
         DateTime,
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
+    )
+
+    bookings: Mapped[list["Booking"]] = relationship(
+    	"Booking",
+    	back_populates="customer",
+    )
+
+    services: Mapped[list["Service"]] = relationship(
+    	"Service",
+    	back_populates="owner",
     )
