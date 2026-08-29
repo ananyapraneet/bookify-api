@@ -33,7 +33,7 @@ The project is actively under development.
 ```text
                         ┌──────────────────┐
                         │     Client       │
-                        │ Swagger / REST    │
+                        │ Swagger / REST   │
                         └────────┬─────────┘
                                  │
                                  ▼
