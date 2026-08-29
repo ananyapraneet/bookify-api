@@ -2,7 +2,7 @@
 
 A production-oriented **SaaS backend for a service booking platform**, built with FastAPI and PostgreSQL.
 
-The project is being developed incrementally with a focus on **backend engineering, API design, authentication, authorization, database architecture, testing, containerization, and DevOps practices**.
+The project is being developed incrementally with a focus on **backend engineering, API design, authentication, authorization, database architecture, business logic, automated testing, containerization, and DevOps practices**.
 
 ---
 
@@ -29,26 +29,18 @@ Implemented:
 * Admin service management
 * Service input validation
 * Booking model and database migration
-* Customer booking creation
-* Service availability validation
-* Overlapping booking prevention
-* Booking retrieval with role-based filtering
-* Customer booking access restrictions
-* Provider booking access restrictions
-* Admin booking access
-* Booking status transitions
-* Customer booking cancellation
-* Provider booking confirmation, completion, and cancellation
-* Admin booking status management
-* Invalid booking status transition protection
+* Booking creation
+* Booking availability / overlap validation
+* Booking cancellation
+* Booking status management
+* Provider booking management
+* Customer booking restrictions
+* Admin booking management
+* Booking status transition rules
 * Automated authentication, security, RBAC, service, and booking tests
 * Dockerized PostgreSQL
 
-**Current automated test status:**
-
-```text
-52 passed
-```
+**Test Status: 52 passed**
 
 The project is actively under development.
 
@@ -57,36 +49,36 @@ The project is actively under development.
 ## 🏗️ Architecture
 
 ```text
-                         ┌──────────────────┐
-                         │      Client      │
-                         │   Swagger / REST │
-                         └────────┬─────────┘
-                                  │
-                                  ▼
-                         ┌──────────────────┐
-                         │     FastAPI      │
-                         │     API Layer    │
-                         └────────┬─────────┘
-                                  │
-              ┌───────────────────┼───────────────────┐
-              │                   │                   │
-              ▼                   ▼                   ▼
-       ┌────────────┐      ┌────────────┐      ┌────────────┐
-       │  Schemas   │      │  Services  │      │  Security  │
-       │  Pydantic  │      │  Business  │      │  JWT/RBAC  │
-       └────────────┘      └──────┬─────┘      └────────────┘
-                                  │
-                                  ▼
-                         ┌──────────────────┐
-                         │    SQLAlchemy    │
-                         │       ORM        │
-                         └────────┬─────────┘
-                                  │
-                                  ▼
-                         ┌──────────────────┐
-                         │    PostgreSQL    │
-                         │     Database     │
-                         └──────────────────┘
+                        ┌──────────────────┐
+                        │      Client      │
+                        │   Swagger / REST │
+                        └────────┬─────────┘
+                                 │
+                                 ▼
+                        ┌──────────────────┐
+                        │     FastAPI      │
+                        │     API Layer    │
+                        └────────┬─────────┘
+                                 │
+                ┌────────────────┼────────────────┐
+                │                │                │
+                ▼                ▼                ▼
+         ┌────────────┐   ┌────────────┐   ┌────────────┐
+         │  Schemas   │   │  Services  │   │  Security  │
+         │  Pydantic  │   │  Business  │   │  JWT/RBAC  │
+         └────────────┘   └──────┬─────┘   └────────────┘
+                                 │
+                                 ▼
+                        ┌──────────────────┐
+                        │    SQLAlchemy    │
+                        │       ORM        │
+                        └────────┬─────────┘
+                                 │
+                                 ▼
+                        ┌──────────────────┐
+                        │    PostgreSQL    │
+                        │     Database     │
+                        └──────────────────┘
 ```
 
 ---
@@ -175,7 +167,6 @@ saas-backend/
 │   │   ├── service.py
 │   │   └── booking.py
 │   │
-│   ├── __init__.py
 │   └── main.py
 │
 ├── alembic/
@@ -198,11 +189,11 @@ saas-backend/
 
 ---
 
-## 🔐 Authentication
+# 🔐 Authentication
 
 Bookify uses JWT-based authentication.
 
-### Registration
+## Registration
 
 ```http
 POST /auth/register
@@ -228,7 +219,7 @@ Duplicate email addresses are rejected with:
 
 ---
 
-### Login
+## Login
 
 ```http
 POST /auth/login
@@ -254,7 +245,7 @@ Successful authentication returns:
 
 ---
 
-### Current User
+## Current User
 
 ```http
 GET /auth/me
@@ -268,7 +259,7 @@ Authorization: Bearer <JWT>
 
 ---
 
-## 👥 Role-Based Access Control
+# 👥 Role-Based Access Control
 
 Bookify currently supports three user roles:
 
@@ -278,7 +269,7 @@ Bookify currently supports three user roles:
 
 Protected endpoints use the authenticated user's role to determine authorization.
 
-### Role endpoints
+## Role Endpoints
 
 ```http
 GET /roles/customer
@@ -294,7 +285,7 @@ Users attempting to access an endpoint requiring a different role receive:
 
 ---
 
-## 🧾 Services
+# 🧾 Services
 
 Services represent bookable offerings within the platform.
 
@@ -308,7 +299,7 @@ Each service contains:
 * Creation timestamp
 * Update timestamp
 
-### Create Service
+## Create Service
 
 ```http
 POST /services
@@ -329,7 +320,7 @@ Example request:
 
 ---
 
-### List Services
+## List Services
 
 ```http
 GET /services
@@ -339,7 +330,7 @@ Authenticated users can retrieve available services.
 
 ---
 
-### Get Service
+## Get Service
 
 ```http
 GET /services/{service_id}
@@ -355,7 +346,7 @@ A non-existent service returns:
 
 ---
 
-### Update Service
+## Update Service
 
 ```http
 PATCH /services/{service_id}
@@ -370,7 +361,7 @@ Authorization rules:
 
 ---
 
-### Delete Service
+## Delete Service
 
 ```http
 DELETE /services/{service_id}
@@ -391,9 +382,9 @@ Unauthorized operations return:
 
 ---
 
-## 📅 Booking System
+# 📅 Booking System
 
-Bookings connect customers with provider services at a specific date and time.
+Bookings connect customers with bookable services.
 
 Each booking contains:
 
@@ -406,7 +397,7 @@ Each booking contains:
 * Creation timestamp
 * Update timestamp
 
-### Create Booking
+## Create Booking
 
 ```http
 POST /bookings
@@ -419,58 +410,26 @@ Example request:
 ```json
 {
   "service_id": 1,
-  "booking_date": "2026-09-05",
+  "booking_date": "2026-09-15",
   "start_time": "10:00:00"
 }
 ```
 
-The booking end time is calculated automatically from the service duration.
-
-New bookings start with:
-
-```text
-pending
-```
+The booking duration is derived from the selected service.
 
 ---
 
-### Booking Availability
+## Booking Availability
 
-Bookify prevents overlapping bookings for the same service.
+The booking system prevents overlapping bookings for the same service.
 
-Attempting to create a booking for an already occupied time slot returns:
-
-```http
-400 Bad Request
-```
-
-Example:
-
-```json
-{
-  "detail": "Service is already booked for this time"
-}
-```
+An attempted overlapping booking is rejected rather than creating conflicting reservations.
 
 ---
 
-### Booking Retrieval
+## Booking Status
 
-Bookings can be retrieved through protected endpoints with role-aware filtering.
-
-The system enforces access according to the authenticated user's role:
-
-* Customers can retrieve their own bookings.
-* Providers can retrieve bookings associated with their services.
-* Admins can access bookings across the platform.
-
----
-
-### Booking Status Management
-
-Bookings support controlled status transitions.
-
-Supported statuses include:
+Bookings support the following statuses:
 
 ```text
 pending
@@ -479,47 +438,55 @@ completed
 cancelled
 ```
 
-Status changes are exposed through:
+Status transitions are controlled by business rules.
+
+Examples:
+
+```text
+pending → confirmed
+pending → cancelled
+confirmed → completed
+confirmed → cancelled
+```
+
+Completed bookings cannot be cancelled.
+
+---
+
+## Update Booking Status
 
 ```http
 PATCH /bookings/{booking_id}/status
 ```
 
-Authorization rules include:
+Authorization rules:
 
-* Customers can cancel their bookings.
-* Providers can confirm bookings.
-* Providers can complete confirmed bookings.
-* Providers can cancel bookings.
-* Admins can change booking status.
+* Customers can only cancel their own bookings.
+* Providers can manage bookings for their services.
+* Admins can change booking statuses.
 * Customers cannot confirm or complete bookings.
+* Unauthorized providers cannot manage another provider's bookings.
 * Invalid status transitions are rejected.
-
-For example, a completed booking cannot be changed to cancelled:
-
-```http
-400 Bad Request
-```
-
-This prevents invalid states from entering the booking workflow.
 
 ---
 
-## 🧪 Testing
+# 🧪 Testing
 
-The project contains automated tests covering authentication, security, role-based authorization, service CRUD, booking creation, booking retrieval, availability, and booking status management.
+The project contains automated tests covering authentication, security, role-based authorization, service CRUD, and booking workflows.
 
 Run the complete test suite:
 
 ```bash
-python -m pytest -v
+python -m pytest
 ```
 
 Current test status:
 
 ```text
-52 passed
+52 passed, 1 warning
 ```
+
+## Test Coverage
 
 ### Security
 
@@ -576,15 +543,15 @@ Current test status:
 * Overlapping booking rejection
 * Provider booking confirmation
 * Provider booking completion
-* Completed booking transition protection
+* Completed booking cancellation rejection
 * Customer booking cancellation
-* Customer status-change restriction
+* Customer status-change restrictions
 * Provider booking cancellation
 * Admin booking status management
 
 ---
 
-## 🐘 Running PostgreSQL
+# 🐘 Running PostgreSQL
 
 PostgreSQL is configured through Docker Compose.
 
@@ -604,7 +571,7 @@ The application expects PostgreSQL configuration through environment variables.
 
 ---
 
-## ⚙️ Environment Variables
+# ⚙️ Environment Variables
 
 Create a local `.env` file:
 
@@ -624,7 +591,7 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 ---
 
-## ▶️ Running the API
+# ▶️ Running the API
 
 Create and activate the virtual environment:
 
@@ -665,17 +632,17 @@ http://127.0.0.1:8000
 
 ---
 
-## 📚 API Documentation
+# 📚 API Documentation
 
 FastAPI automatically provides interactive API documentation.
 
-### Swagger UI
+Swagger UI:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-### ReDoc
+ReDoc:
 
 ```text
 http://127.0.0.1:8000/redoc
@@ -683,9 +650,9 @@ http://127.0.0.1:8000/redoc
 
 ---
 
-## 🗺️ Roadmap
+# 🗺️ Roadmap
 
-The project will evolve into a complete SaaS booking platform.
+The project will evolve into a complete production-style SaaS booking platform.
 
 ### Stage 1 — Project Initialization ✅
 
@@ -736,40 +703,52 @@ The project will evolve into a complete SaaS booking platform.
 ### Stage 6 — Booking System ✅
 
 * Booking model
-* Booking schemas
 * Booking database migration
 * Booking creation
 * Service availability validation
 * Overlapping booking prevention
-* Booking retrieval
-* Role-based booking filtering
 * Booking cancellation
 * Booking status management
-* Status transition validation
-* Booking automated tests
+* Status transition rules
+* Provider booking management
+* Customer booking restrictions
+* Admin booking management
+* Booking workflow tests
 
-### Stage 7 — Production Engineering
+### Stage 7 — Production Quality
 
-* Redis
-* Background jobs
-* Structured logging
+* Stronger request/input validation
 * Centralized error handling
-* Configuration management
-* Health/readiness checks
+* Structured application logging
+* Consistent API error responses
+* Liveness and readiness health checks
+* Database health checks
+* Production-oriented configuration
+* Additional integration and failure-path tests
 
-### Stage 8 — DevOps & Cloud
+### Stage 8 — Redis / Caching & Background Work
+
+* Redis integration
+* Caching
+* Cache invalidation
+* Background jobs
+* Asynchronous task processing
+* Booking-related background workflows
+* Performance improvements
+
+### Stage 9 — DevOps & Cloud
 
 * CI/CD with GitHub Actions
-* Docker image
+* Production Docker image
 * AWS deployment
 * Infrastructure as Code
 * Monitoring
-* Logging
+* Centralized logging
 * Production deployment architecture
 
 ---
 
-## 🎯 Engineering Goals
+# 🎯 Engineering Goals
 
 This project is designed to demonstrate practical experience with:
 
@@ -781,18 +760,21 @@ This project is designed to demonstrate practical experience with:
 * SQLAlchemy ORM
 * Database migrations
 * Secure credential handling
+* Business logic implementation
 * Automated testing
 * Docker
+* Redis and caching
+* Background processing
 * CI/CD
 * Cloud infrastructure
 * Observability
 * Production deployment
 
-The goal is to build the application progressively from a local backend into a **production-style SaaS platform**.
+The goal is to progressively build the application from a local backend into a **production-style SaaS platform**.
 
 ---
 
-## 📌 Development Philosophy
+# 📌 Development Philosophy
 
 The project is intentionally developed in stages.
 
