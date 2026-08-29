@@ -1,9 +1,16 @@
 from datetime import datetime, timezone
+from enum import Enum
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime, Enum as SQLEnum, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+
+
+class UserRole(str, Enum):
+    CUSTOMER = "customer"
+    PROVIDER = "provider"
+    ADMIN = "admin"
 
 
 class User(Base):
@@ -31,10 +38,15 @@ class User(Base):
         nullable=False,
     )
 
-    role: Mapped[str] = mapped_column(
-        String(50),
+    role: Mapped[UserRole] = mapped_column(
+        SQLEnum(
+            UserRole,
+            values_callable=lambda enum_class: [
+                member.value for member in enum_class
+            ],
+        ),
         nullable=False,
-        default="customer",
+        default=UserRole.CUSTOMER,
     )
 
     created_at: Mapped[datetime] = mapped_column(
