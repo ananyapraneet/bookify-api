@@ -12,6 +12,7 @@ from app.services.booking import (
     get_bookings,
     update_booking_status,
 )
+from app.tasks.notifications import send_booking_confirmation
 
 router = APIRouter(
     prefix="/bookings",
@@ -36,11 +37,19 @@ def create_booking_endpoint(
         )
 
     try:
-        return create_booking(
+        booking = create_booking(
             db,
             booking_data,
             current_user.id,
         )
+
+        send_booking_confirmation.delay(
+            booking.id,
+            current_user.email,
+        )
+
+        return booking
+
     except ValueError as exc:
         if str(exc) == "Service not found":
             raise HTTPException(
@@ -52,6 +61,7 @@ def create_booking_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         )
+
 
 @router.get(
     "",
@@ -103,6 +113,7 @@ def get_booking_endpoint(
             )
 
     return booking
+
 
 @router.patch(
     "/{booking_id}/status",
@@ -166,6 +177,7 @@ def update_booking_status_endpoint(
             booking,
             new_status,
         )
+
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

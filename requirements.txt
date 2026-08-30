@@ -9,5 +9,6 @@ pwdlib[argon2]
 redis
 pytest
 pytest-asyncio
+celery
 httpx
 email-validator
