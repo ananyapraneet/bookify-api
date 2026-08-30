@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     postgres_host: str
     postgres_port: int
 
+    # Redis configuration
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+
     # JWT configuration
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
@@ -22,6 +27,14 @@ class Settings(BaseSettings):
             f"{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}"
             f"/{self.postgres_db}"
+        )
+
+    @property
+    def redis_url(self) -> str:
+        return (
+            f"redis://"
+            f"{self.redis_host}:{self.redis_port}/"
+            f"{self.redis_db}"
         )
 
     model_config = SettingsConfigDict(

@@ -24,6 +24,7 @@ def test_readiness_check():
     assert response.json() == {
         "status": "ok",
         "database": "ok",
+        "redis": "ok",
     }
 
 
@@ -45,6 +46,7 @@ def test_readiness_check_database_unavailable():
             "detail": {
                 "status": "degraded",
                 "database": "unavailable",
+                "redis": "ok",
             }
         }
 

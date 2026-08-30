@@ -8,5 +8,6 @@ python-jose[cryptography]
 pwdlib[argon2]
 redis
 pytest
+pytest-asyncio
 httpx
 email-validator

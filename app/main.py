@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
@@ -20,10 +21,19 @@ from app.core.logging import configure_logging
 configure_logging()
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Application startup")
+
+    yield
+
+    logger.info("Application shutdown")
+
 app = FastAPI(
     title="Bookify API",
     description="Production-ready service booking platform",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 logger.info("Bookify API initialized")

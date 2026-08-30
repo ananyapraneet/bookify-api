@@ -1,7 +1,11 @@
+import json
+
 from uuid import uuid4
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
+from app.core.redis import get_redis
 from app.core.security import create_access_token
 from app.db.database import SessionLocal
 from app.main import app
@@ -126,6 +130,47 @@ def test_customer_can_list_services():
         for item in data
     )
 
+def test_list_services_uses_redis_cache_hit():
+
+    user = create_test_user(UserRole.CUSTOMER)
+
+    cached_service = {
+        "id": 999999,
+        "name": "Cached Service",
+        "description": "Returned from Redis",
+        "price": "799.00",
+        "duration_minutes": 45,
+        "owner_id": user.id,
+        "created_at": "2026-08-31T10:00:00Z",
+        "updated_at": "2026-08-31T10:00:00Z",
+    }
+
+    mock_redis = AsyncMock()
+
+    mock_redis.get.return_value = json.dumps(
+        [cached_service]
+    )
+
+    app.dependency_overrides[
+        get_redis
+    ] = lambda: mock_redis
+
+    try:
+        response = client.get(
+            "/services",
+            headers=get_auth_headers(user),
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == [cached_service]
+
+    mock_redis.get.assert_awaited_once_with(
+        "services:list"
+    )
+
+    mock_redis.set.assert_not_awaited()
 
 def test_get_service():
     user = create_test_user(UserRole.PROVIDER)
@@ -408,3 +453,133 @@ def test_create_service_strips_name_whitespace():
 
     assert response.status_code == 201
     assert response.json()["name"] == "Test Haircut"
+
+def test_create_service_invalidates_cache():
+    user = create_test_user(UserRole.PROVIDER)
+
+    response = client.post(
+        "/services",
+        headers=get_auth_headers(user),
+        json={
+            "name": "Cached Service",
+            "description": "Cache invalidation test",
+            "price": 500.00,
+            "duration_minutes": 30,
+        },
+    )
+
+    assert response.status_code == 201
+
+def test_list_services_uses_database_on_redis_cache_miss():
+    user = create_test_user(UserRole.CUSTOMER)
+    service = create_test_service(user.id)
+
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = None
+
+    app.dependency_overrides[
+        get_redis
+    ] = lambda: mock_redis
+
+    try:
+        response = client.get(
+            "/services",
+            headers=get_auth_headers(user),
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert any(
+        item["id"] == service.id
+        for item in data
+    )
+
+    mock_redis.get.assert_awaited_once_with(
+        "services:list"
+    )
+
+    mock_redis.set.assert_awaited_once()
+
+    set_args = mock_redis.set.await_args
+
+    assert set_args.args[0] == "services:list"
+    assert set_args.kwargs["ex"] == 60
+
+def test_update_service_invalidates_cache():
+    provider = create_test_user(UserRole.PROVIDER)
+
+    create_response = client.post(
+        "/services",
+        json={
+            "name": "Original Service",
+            "description": "Original Description",
+            "price": "500.00",
+            "duration_minutes": 30,
+        },
+        headers=get_auth_headers(provider),
+    )
+
+    assert create_response.status_code == 201
+
+    service = create_response.json()
+
+    mock_redis = AsyncMock()
+
+    app.dependency_overrides[get_redis] = lambda: mock_redis
+
+    try:
+        response = client.patch(
+            f"/services/{service['id']}",
+            json={
+                "name": "Updated Service",
+            },
+            headers=get_auth_headers(provider),
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    mock_redis.delete.assert_awaited_once_with(
+        "services:list"
+    )
+
+def test_delete_service_invalidates_cache():
+    provider = create_test_user(UserRole.PROVIDER)
+
+    create_response = client.post(
+        "/services",
+        json={
+            "name": "Service To Delete",
+            "description": "Service for deletion test",
+            "price": "500.00",
+            "duration_minutes": 30,
+        },
+        headers=get_auth_headers(provider),
+    )
+
+    assert create_response.status_code == 201
+
+    service = create_response.json()
+
+    mock_redis = AsyncMock()
+
+    app.dependency_overrides[get_redis] = lambda: mock_redis
+
+    try:
+        response = client.delete(
+            f"/services/{service['id']}",
+            headers=get_auth_headers(provider),
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 204
+
+    mock_redis.delete.assert_awaited_once_with(
+        "services:list"
+    )

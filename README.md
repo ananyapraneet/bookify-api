@@ -2,93 +2,173 @@
 
 A production-oriented **SaaS backend for a service booking platform**, built with FastAPI and PostgreSQL.
 
-The project is being developed incrementally with a focus on **backend engineering, API design, authentication, authorization, database architecture, business logic, automated testing, containerization, and DevOps practices**.
+The project is being developed incrementally with a focus on **backend engineering, API design, authentication, authorization, database architecture, business logic, automated testing, caching, containerization, and DevOps 
+practices**.
 
 ---
 
 ## 🚀 Project Status
 
-**Current Stage: Stage 7 — Production Quality ✅**
+**Current Stage: Stage 8 — Redis / Caching ✅**
 
 Implemented:
 
-- FastAPI application
-- PostgreSQL persistence
-- SQLAlchemy ORM
-- Alembic database migrations
-- User registration
-- Secure password hashing using Argon2
-- JWT-based authentication
-- User login
-- Protected `/auth/me` endpoint
-- User roles: Customer, Provider, Admin
-- Role-based access control
-- Service CRUD
-- Provider ownership enforcement
-- Admin service management
-- Service input validation
-- Booking creation
-- Booking availability / overlap validation
-- Booking cancellation
-- Booking status management
-- Provider booking management
-- Customer booking restrictions
-- Admin booking management
-- Booking status transition rules
-- Centralized exception handling
-- Request validation error handling
-- Structured application logging
-- Liveness health check
-- Database readiness check
-- Failure-path testing
-- Automated authentication, security, RBAC, service, booking, and health tests
-- Dockerized PostgreSQL
+* FastAPI application
+* PostgreSQL persistence
+* SQLAlchemy ORM
+* Alembic database migrations
+* User registration
+* Secure password hashing using Argon2
+* JWT-based authentication
+* User login
+* Protected `/auth/me` endpoint
+* User roles: Customer, Provider, Admin
+* Role-based access control
+* Service CRUD
+* Provider ownership enforcement
+* Admin service management
+* Service input validation
+* Booking creation
+* Booking availability / overlap validation
+* Booking cancellation
+* Booking status management
+* Provider booking management
+* Customer booking restrictions
+* Admin booking management
+* Booking status transition rules
+* Centralized exception handling
+* Request validation error handling
+* Structured application logging
+* Liveness health check
+* Database readiness check
+* Redis integration
+* Redis client configuration
+* Redis health/readiness integration
+* Cache abstraction
+* Cache-aside pattern
+* Service list caching
+* Cache hit/miss handling
+* Cache TTL strategy
+* Cache invalidation after service mutations
+* Cache consistency handling
+* Redis failure handling
+* Redis-related automated tests
+* Cache performance benchmarking
+* Automated authentication, security, RBAC, service, booking, health, and Redis tests
+* Dockerized PostgreSQL
+* Dockerized Redis
 
-**Test Status: 61 passed, 1 warning**
+**Test Status: 68 passed, 1 warning**
 
-The project is actively under development.
+### Cache Performance Benchmark
+
+A local performance comparison was performed between the database-backed cache-miss path and the Redis cache-hit path for `GET /services`.
+
+| Metric   | Cache Miss / PostgreSQL | Cache Hit / Redis |
+| -------- | ----------------------: | ----------------: |
+| Requests |                      20 |                20 |
+| Minimum  |                34.02 ms |          18.02 ms |
+| Maximum  |               101.58 ms |          31.17 ms |
+| Average  |            **41.15 ms** |      **22.17 ms** |
+| Median   |                36.97 ms |          21.47 ms |
+
+Measured results:
+
+* **Latency reduction:** 46.13%
+* **Approximate speedup:** 1.86×
+* Benchmark environment: local development environment with PostgreSQL and Redis running through Docker
+
+These results represent the difference between a forced cache-miss/database path and a Redis cache-hit path under the local test environment. Actual performance improvements will vary depending on deployment infrastructure, network 
+latency, database load, dataset size, and application workload.
+
+## The project is actively under development.
+
 ---
 
-## 🏗️ Architecture
+# 🏗️ Architecture
 
 ```text
-                        ┌──────────────────┐
-                        │      Client      │
-                        │   Swagger / REST │
-                        └────────┬─────────┘
-                                 │
-                                 ▼
-                        ┌──────────────────┐
-                        │     FastAPI      │
-                        │     API Layer    │
-                        └────────┬─────────┘
-                                 │
-                ┌────────────────┼────────────────┐
-                │                │                │
-                ▼                ▼                ▼
-         ┌────────────┐   ┌────────────┐   ┌────────────┐
-         │  Schemas   │   │  Services  │   │  Security  │
-         │  Pydantic  │   │  Business  │   │  JWT/RBAC  │
-         └────────────┘   └──────┬─────┘   └────────────┘
-                                 │
-                                 ▼
-                        ┌──────────────────┐
-                        │    SQLAlchemy    │
-                        │       ORM        │
-                        └────────┬─────────┘
-                                 │
-                                 ▼
-                        ┌──────────────────┐
-                        │    PostgreSQL    │
-                        │     Database     │
-                        └──────────────────┘
+                         ┌──────────────────┐
+                         │      Client      │
+                         │   Swagger / REST │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │     FastAPI      │
+                         │     API Layer    │
+                         └────────┬─────────┘
+                                  │
+                 ┌────────────────┼────────────────┐
+                 │                │                │
+                 ▼                ▼                ▼
+          ┌────────────┐   ┌────────────┐   ┌────────────┐
+          │  Schemas   │   │  Services  │   │  Security  │
+          │  Pydantic  │   │  Business  │   │  JWT/RBAC  │
+          └────────────┘   └──────┬─────┘   └────────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │    Cache Layer   │
+                         │ Cache-Aside      │
+                         └────────┬─────────┘
+                                  │
+                         ┌────────┴────────┐
+                         │                 │
+                         ▼                 ▼
+                  ┌────────────┐    ┌────────────┐
+                  │   Redis    │    │ SQLAlchemy │
+                  │   Cache    │    │    ORM     │
+                  └────────────┘    └──────┬─────┘
+                                           │
+                                           ▼
+                                  ┌──────────────────┐
+                                  │    PostgreSQL    │
+                                  │     Database     │
+                                  └──────────────────┘
+```
+
+### Caching Flow
+
+Bookify uses a **cache-aside pattern** for frequently accessed service data.
+
+```text
+GET /services
+      │
+      ▼
+   Redis GET
+      │
+      ├── Cache HIT ──────► Return cached services
+      │
+      └── Cache MISS
+              │
+              ▼
+         PostgreSQL
+              │
+              ▼
+        Store in Redis
+              │
+              ▼
+        Return services
+```
+
+Service mutations invalidate the cached service list:
+
+```text
+Create / Update / Delete Service
+              │
+              ▼
+        PostgreSQL
+              │
+              ▼
+      Invalidate Redis
 ```
 
 ---
 
-## 🛠️ Tech Stack
+# 🛠️ Tech Stack
 
-### Backend
+## Backend
 
 * Python 3
 * FastAPI
@@ -96,14 +176,23 @@ The project is actively under development.
 * Pydantic
 * Pydantic Settings
 
-### Database
+## Database
 
 * PostgreSQL
 * SQLAlchemy
 * Alembic
 * psycopg2
 
-### Authentication & Security
+## Caching
+
+* Redis
+* `redis-py`
+* Redis async client
+* Cache-aside pattern
+* TTL-based caching
+* Cache invalidation
+
+## Authentication & Security
 
 * JWT
 * `python-jose`
@@ -111,13 +200,17 @@ The project is actively under development.
 * `pwdlib`
 * Role-based access control
 
-### Testing
+## Testing
 
 * Pytest
 * FastAPI TestClient
 * HTTPX
+* Redis integration tests
+* Failure-path tests
+* Cache behavior tests
+* Performance benchmarking
 
-### Infrastructure / DevOps
+## Infrastructure / DevOps
 
 * Docker
 * Docker Compose
@@ -126,7 +219,7 @@ The project is actively under development.
 
 ---
 
-## 📁 Project Structure
+# 📁 Project Structure
 
 ```text
 saas-backend/
@@ -137,13 +230,16 @@ saas-backend/
 │   │   └── routes/
 │   │       ├── __init__.py
 │   │       ├── auth.py
+│   │       ├── health.py
 │   │       ├── roles.py
 │   │       ├── services.py
 │   │       └── bookings.py
 │   │
 │   ├── core/
 │   │   ├── __init__.py
+│   │   ├── cache.py
 │   │   ├── config.py
+│   │   ├── redis.py
 │   │   └── security.py
 │   │
 │   ├── db/
@@ -175,12 +271,17 @@ saas-backend/
 ├── alembic/
 │   └── versions/
 │
+├── scripts/
+│   └── benchmark_cache.py
+│
 ├── tests/
 │   ├── test_auth.py
 │   ├── test_roles.py
 │   ├── test_security.py
 │   ├── test_services.py
-│   └── test_bookings.py
+│   ├── test_bookings.py
+│   ├── test_health.py
+│   └── test_redis.py
 │
 ├── .env
 ├── .gitignore
@@ -198,7 +299,7 @@ Bookify uses JWT-based authentication.
 
 ## Registration
 
-```http
+```text
 POST /auth/register
 ```
 
@@ -216,7 +317,7 @@ Passwords are never stored in plaintext. They are hashed using **Argon2** before
 
 Duplicate email addresses are rejected with:
 
-```http
+```text
 409 Conflict
 ```
 
@@ -224,7 +325,7 @@ Duplicate email addresses are rejected with:
 
 ## Login
 
-```http
+```text
 POST /auth/login
 ```
 
@@ -250,13 +351,13 @@ Successful authentication returns:
 
 ## Current User
 
-```http
+```text
 GET /auth/me
 ```
 
 Requires a valid JWT bearer token.
 
-```http
+```text
 Authorization: Bearer <JWT>
 ```
 
@@ -274,7 +375,7 @@ Protected endpoints use the authenticated user's role to determine authorization
 
 ## Role Endpoints
 
-```http
+```text
 GET /roles/customer
 GET /roles/provider
 GET /roles/admin
@@ -282,7 +383,7 @@ GET /roles/admin
 
 Users attempting to access an endpoint requiring a different role receive:
 
-```http
+```text
 403 Forbidden
 ```
 
@@ -304,7 +405,7 @@ Each service contains:
 
 ## Create Service
 
-```http
+```text
 POST /services
 ```
 
@@ -325,17 +426,23 @@ Example request:
 
 ## List Services
 
-```http
+```text
 GET /services
 ```
 
 Authenticated users can retrieve available services.
 
+The service list uses Redis caching with a cache-aside strategy.
+
+On a cache hit, the API returns the serialized service data directly from Redis.
+
+On a cache miss, the API retrieves the services from PostgreSQL and stores the result in Redis for subsequent requests.
+
 ---
 
 ## Get Service
 
-```http
+```text
 GET /services/{service_id}
 ```
 
@@ -343,7 +450,7 @@ Returns a specific service.
 
 A non-existent service returns:
 
-```http
+```text
 404 Not Found
 ```
 
@@ -351,7 +458,7 @@ A non-existent service returns:
 
 ## Update Service
 
-```http
+```text
 PATCH /services/{service_id}
 ```
 
@@ -362,11 +469,13 @@ Authorization rules:
 * Admins can update services owned by other providers.
 * Customers cannot update services.
 
+After a successful update, the service-list cache is invalidated to prevent stale cached data.
+
 ---
 
 ## Delete Service
 
-```http
+```text
 DELETE /services/{service_id}
 ```
 
@@ -377,11 +486,150 @@ Authorization rules:
 * Admins can delete services owned by other providers.
 * Customers cannot delete services.
 
+After a successful deletion, the service-list cache is invalidated.
+
 Unauthorized operations return:
 
-```http
+```text
 403 Forbidden
 ```
+
+---
+
+# ⚡ Redis / Caching
+
+Bookify uses Redis to reduce database access for frequently requested service data.
+
+## Redis Integration
+
+Redis runs as a Docker Compose service:
+
+```text
+redis:7-alpine
+```
+
+The application connects to Redis through configurable environment variables.
+
+Redis configuration includes:
+
+* Host
+* Port
+* Database number
+
+---
+
+## Cache Key
+
+The service list uses the following cache key:
+
+```text
+services:list
+```
+
+---
+
+## TTL Strategy
+
+Cached service data uses a **60-second TTL**.
+
+This provides a balance between:
+
+* Reducing repeated database queries
+* Keeping cached data reasonably fresh
+* Preventing indefinitely stale data
+
+---
+
+## Cache-Aside Pattern
+
+The `/services` endpoint follows this flow:
+
+```text
+1. Check Redis
+2. If cache hit → return cached data
+3. If cache miss → query PostgreSQL
+4. Serialize the result
+5. Store result in Redis
+6. Return response
+```
+
+---
+
+## Cache Invalidation
+
+The service cache is invalidated after:
+
+```text
+POST   /services
+PATCH  /services/{service_id}
+DELETE /services/{service_id}
+```
+
+This prevents the service-list cache from continuing to serve data that no longer reflects the database state.
+
+---
+
+## Redis Failure Handling
+
+Redis is treated as an optimization rather than a hard dependency for service retrieval.
+
+If Redis becomes unavailable:
+
+* Cache reads fail gracefully.
+* The application falls back to PostgreSQL.
+* Cache writes fail gracefully.
+* Service mutations continue to operate.
+* Redis failures do not cause the service API to become unavailable.
+
+This design prevents a cache outage from becoming a complete application outage.
+
+---
+
+## Redis Health / Readiness
+
+The application checks Redis availability as part of the readiness health check.
+
+Redis connectivity is verified using a Redis `PING`.
+
+A healthy system reports Redis as available, while Redis failures are reported without crashing the application.
+
+---
+
+# 📊 Cache Performance Benchmark
+
+A performance benchmark was added under:
+
+```text
+scripts/benchmark_cache.py
+```
+
+The benchmark compares:
+
+1. **Cache-miss path** — request reaches PostgreSQL.
+2. **Cache-hit path** — request is served from Redis.
+
+### Results
+
+20 requests were measured for each path.
+
+| Metric  | Cache Miss / PostgreSQL | Cache Hit / Redis |
+| ------- | ----------------------: | ----------------: |
+| Minimum |                34.02 ms |          18.02 ms |
+| Maximum |               101.58 ms |          31.17 ms |
+| Average |            **41.15 ms** |      **22.17 ms** |
+| Median  |                36.97 ms |          21.47 ms |
+
+### Observed improvement
+
+```text
+Latency reduction: 46.13%
+Approximate speedup: 1.86x
+```
+
+These measurements were collected locally with PostgreSQL and Redis running through Docker.
+
+The benchmark demonstrates the performance characteristics of the cache-hit path relative to the database-backed cache-miss path. Production performance will depend on infrastructure, network latency, database workload, dataset 
+size, and traffic patterns.
 
 ---
 
@@ -402,7 +650,7 @@ Each booking contains:
 
 ## Create Booking
 
-```http
+```text
 POST /bookings
 ```
 
@@ -458,7 +706,7 @@ Completed bookings cannot be cancelled.
 
 ## Update Booking Status
 
-```http
+```text
 PATCH /bookings/{booking_id}/status
 ```
 
@@ -475,7 +723,7 @@ Authorization rules:
 
 # 🧪 Testing
 
-The project contains automated tests covering authentication, security, role-based authorization, service CRUD, and booking workflows.
+The project contains automated tests covering authentication, security, role-based authorization, service CRUD, booking workflows, health checks, Redis integration, cache behavior, and failure paths.
 
 Run the complete test suite:
 
@@ -486,7 +734,7 @@ python -m pytest
 Current test status:
 
 ```text
-52 passed, 1 warning
+68 passed, 1 warning
 ```
 
 ## Test Coverage
@@ -536,6 +784,9 @@ Current test status:
 * Service duration validation
 * Required field validation
 * Service authentication requirements
+* Service cache invalidation
+* Redis cache hit handling
+* Redis cache miss handling
 
 ### Booking System
 
@@ -552,13 +803,32 @@ Current test status:
 * Provider booking cancellation
 * Admin booking status management
 
+### Redis / Caching
+
+* Redis connectivity
+* Redis unavailable failure handling
+* Redis cache hit
+* Redis cache miss
+* Database fallback
+* Service cache invalidation after creation
+* Service cache invalidation after update
+* Service cache invalidation after deletion
+
+### Health / Failure Paths
+
+* Liveness health check
+* Database readiness
+* Database unavailable handling
+* Redis availability
+* Redis failure handling
+
 ---
 
 # 🐘 Running PostgreSQL
 
 PostgreSQL is configured through Docker Compose.
 
-Start the database:
+Start the infrastructure:
 
 ```bash
 docker compose up -d
@@ -570,7 +840,42 @@ Check running containers:
 docker ps
 ```
 
-The application expects PostgreSQL configuration through environment variables.
+Expected services include:
+
+```text
+bookify-postgres
+bookify-redis
+```
+
+---
+
+# ⚡ Running Redis
+
+Redis is included in `docker-compose.yml`.
+
+Start Redis:
+
+```bash
+docker compose up -d redis
+```
+
+Verify the Redis container:
+
+```bash
+docker ps
+```
+
+Test Redis connectivity:
+
+```bash
+docker exec bookify-redis redis-cli ping
+```
+
+Expected:
+
+```text
+PONG
+```
 
 ---
 
@@ -578,12 +883,16 @@ The application expects PostgreSQL configuration through environment variables.
 
 Create a local `.env` file:
 
-```env
+```text
 POSTGRES_USER=bookify
 POSTGRES_PASSWORD=your_password
 POSTGRES_DB=bookify
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
 
 JWT_SECRET_KEY=your_secret_key
 JWT_ALGORITHM=HS256
@@ -609,7 +918,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Start PostgreSQL:
+Start PostgreSQL and Redis:
 
 ```bash
 docker compose up -d
@@ -632,6 +941,18 @@ The API will be available at:
 ```text
 http://127.0.0.1:8000
 ```
+
+---
+
+# 📊 Running the Cache Benchmark
+
+With PostgreSQL, Redis, and the FastAPI application running:
+
+```bash
+python scripts/benchmark_cache.py
+```
+
+The script requires a valid JWT access token and measures the service-list endpoint under cache-miss and cache-hit conditions.
 
 ---
 
@@ -720,49 +1041,50 @@ The project will evolve into a complete production-style SaaS booking platform.
 
 ### Stage 7 — Production Quality ✅
 
-- Stronger request/input validation
-- Centralized error handling
-- Structured application logging
-- Consistent API error responses
-- Liveness and readiness health checks
-- Database health/readiness checks
-- Production-oriented configuration
-- Integration and failure-path tests
+* Stronger request/input validation
+* Centralized error handling
+* Structured application logging
+* Consistent API error responses
+* Liveness and readiness health checks
+* Database health/readiness checks
+* Production-oriented configuration
+* Integration and failure-path tests
 
-### Stage 8 — Redis / Caching
+### Stage 8 — Redis / Caching ✅
 
-- Redis integration
-- Redis connection/client configuration
-- Redis health/readiness integration
-- Cache abstraction
-- Cache-aside pattern
-- Cache keys and TTL strategy
-- Cache frequently accessed service data
-- Cache hit/miss handling
-- Cache invalidation
-- Cache consistency considerations
-- Redis failure handling
-- Redis-related automated tests
-- Performance comparison before/after caching
+* Redis integration
+* Redis connection/client configuration
+* Redis health/readiness integration
+* Cache abstraction
+* Cache-aside pattern
+* Cache keys and TTL strategy
+* Cache frequently accessed service data
+* Cache hit/miss handling
+* Cache invalidation
+* Cache consistency considerations
+* Redis failure handling
+* Redis-related automated tests
+* Performance comparison before/after caching
 
 ### Stage 9 — Background Processing
 
-- Background job architecture
-- Asynchronous task processing
-- Booking-related background workflows
-- Job retries
-- Failure handling
-- Scheduled/background tasks
+* Background job architecture
+* Asynchronous task processing
+* Booking-related background workflows
+* Job retries
+* Failure handling
+* Scheduled/background tasks
 
 ### Stage 10 — DevOps & Cloud
 
-- CI/CD with GitHub Actions
-- Production Docker image
-- AWS deployment
-- Infrastructure as Code
-- Monitoring
-- Centralized logging
-- Production deployment architecture
+* CI/CD with GitHub Actions
+* Production Docker image
+* AWS deployment
+* Infrastructure as Code
+* Monitoring
+* Centralized logging
+* Production deployment architecture
+
 ---
 
 # 🎯 Engineering Goals
@@ -779,8 +1101,11 @@ This project is designed to demonstrate practical experience with:
 * Secure credential handling
 * Business logic implementation
 * Automated testing
-* Docker
 * Redis and caching
+* Cache-aside architecture
+* Cache invalidation
+* Failure-tolerant application design
+* Docker
 * Background processing
 * CI/CD
 * Cloud infrastructure
@@ -800,8 +1125,9 @@ Each stage introduces a focused set of capabilities, followed by:
 1. Implementation
 2. Local verification
 3. Automated tests
-4. Git commit
-5. GitHub version control
+4. Performance or failure-path validation where applicable
+5. Git commit
+6. GitHub version control
 
 This provides a clear development history and makes the repository useful as both a **portfolio project and an engineering learning exercise**.
 
