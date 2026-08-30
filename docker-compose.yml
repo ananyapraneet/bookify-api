@@ -1,69 +1,166 @@
 services:
 
-  postgres:
-    image: postgres:16
-    container_name: bookify-postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "${POSTGRES_PORT}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    container_name: bookify-redis
-    ports:
-      - "${REDIS_PORT}:6379"
-    volumes:
-      - redis_data:/data
-
   api:
     build:
       context: .
+      dockerfile: Dockerfile
+
     container_name: bookify-api
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
     environment:
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
+      POSTGRES_PORT: "5432"
+
       REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_DB: ${REDIS_DB}
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ALGORITHM: ${JWT_ALGORITHM}
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES}
+
     ports:
       - "8000:8000"
-    depends_on:
-      - postgres
-      - redis
+
+    read_only: true
+
+    tmpfs:
+      - /tmp
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+    pids_limit: 100
+
+    cpus: 1.0
+
+    mem_limit: 512m
+
+    restart: unless-stopped
+
 
   celery_worker:
     build:
       context: .
+      dockerfile: Dockerfile
+
     container_name: bookify-celery-worker
-    command: celery -A app.core.celery worker --loglevel=info
-    security_opt:
-      - no-new-privileges:true
+
+    command:
+      - celery
+      - -A
+      - app.core.celery
+      - worker
+      - --loglevel=info
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
     environment:
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
+      POSTGRES_PORT: "5432"
+
       REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_DB: ${REDIS_DB}
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ALGORITHM: ${JWT_ALGORITHM}
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES}
-    depends_on:
-      - postgres
-      - redis
+
+    read_only: true
+
+    tmpfs:
+      - /tmp
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+    pids_limit: 100
+
+    cpus: 1.0
+
+    mem_limit: 512m
+
+    restart: unless-stopped
+
+
+  postgres:
+    image: postgres:16
+
+    container_name: bookify-postgres
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    security_opt:
+      - no-new-privileges:true
+
+    restart: unless-stopped
+
+
+  redis:
+    image: redis:7-alpine
+
+    container_name: bookify-redis
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    security_opt:
+      - no-new-privileges:true
+
+    restart: unless-stopped
+
 
 volumes:
   postgres_data:

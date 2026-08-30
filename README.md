@@ -2,14 +2,14 @@
 
 A production-oriented **SaaS backend for a service booking platform**, built with FastAPI and PostgreSQL.
 
-The project is being developed incrementally with a focus on **backend engineering, API design, authentication, authorization, database architecture, business logic, automated testing, caching, containerization, and DevOps 
-practices**.
+The project is being developed incrementally with a focus on **backend engineering, API design, authentication, authorization, database architecture, business logic, automated testing, caching, background processing,
+containerization, and DevOps practices**.
 
 ---
 
 ## 🚀 Project Status
 
-**Current Stage: Stage 8 — Redis / Caching ✅**
+**Current Stage: Stage 9 — Background Processing with Celery ✅**
 
 Implemented:
 
@@ -54,11 +54,25 @@ Implemented:
 * Redis failure handling
 * Redis-related automated tests
 * Cache performance benchmarking
-* Automated authentication, security, RBAC, service, booking, health, and Redis tests
+* Celery integration
+* Redis-backed Celery message broker
+* Celery result backend
+* Asynchronous background task processing
+* Booking confirmation background task
+* Celery task retry configuration
+* Task failure handling
+* Maximum retry handling
+* Background task logging
+* Celery task execution tests
+* Booking-to-Celery task dispatch testing
+* Dockerized FastAPI application
 * Dockerized PostgreSQL
 * Dockerized Redis
+* Dockerized Celery worker
+* Non-root container execution
+* Production-oriented container configuration
 
-**Test Status: 68 passed, 1 warning**
+**Test Status: 75 passed, 1 warning**
 
 ### Cache Performance Benchmark
 
@@ -87,6 +101,8 @@ latency, database load, dataset size, and application workload.
 
 # 🏗️ Architecture
 
+Bookify currently uses FastAPI for synchronous API processing, Redis for caching and Celery message brokering, PostgreSQL for persistence, and a dedicated Celery worker for asynchronous background processing.
+
 ```text
                          ┌──────────────────┐
                          │      Client      │
@@ -107,12 +123,6 @@ latency, database load, dataset size, and application workload.
           │  Pydantic  │   │  Business  │   │  JWT/RBAC  │
           └────────────┘   └──────┬─────┘   └────────────┘
                                   │
-                                  ▼
-                         ┌──────────────────┐
-                         │    Cache Layer   │
-                         │ Cache-Aside      │
-                         └────────┬─────────┘
-                                  │
                          ┌────────┴────────┐
                          │                 │
                          ▼                 ▼
@@ -126,9 +136,49 @@ latency, database load, dataset size, and application workload.
                                   │    PostgreSQL    │
                                   │     Database     │
                                   └──────────────────┘
+
+                         Background Processing
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │      Redis       │
+                         │   Celery Broker  │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │  Celery Worker   │
+                         │  Background Jobs │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                           Task Execution
 ```
 
-### Caching Flow
+Redis has two distinct responsibilities in the current architecture:
+
+```text
+                    ┌──────────────────┐
+                    │      Redis       │
+                    └────────┬─────────┘
+                             │
+               ┌─────────────┴─────────────┐
+               │                           │
+               ▼                           ▼
+        ┌──────────────┐            ┌──────────────┐
+        │ Cache Layer  │            │ Celery Broker│
+        │ Service Data │            │ Task Queue   │
+        └──────────────┘            └──────┬───────┘
+                                           │
+                                           ▼
+                                  ┌─────────────────┐
+                                  │ Celery Worker   │
+                                  └─────────────────┘
+```
+
+---
+
+# ⚡ Caching Flow
 
 Bookify uses a **cache-aside pattern** for frequently accessed service data.
 
@@ -164,6 +214,170 @@ Create / Update / Delete Service
       Invalidate Redis
 ```
 
+Redis is treated as an optimization rather than a hard dependency for service retrieval. If Redis becomes unavailable, service retrieval falls back to PostgreSQL.
+
+---
+
+# 🔄 Background Processing
+
+Bookify uses **Celery** to process tasks asynchronously outside the main FastAPI request lifecycle.
+
+The current architecture is:
+
+```text
+Client
+   │
+   ▼
+FastAPI
+   │
+   ├── Normal API processing
+   │
+   └── Queue background task
+            │
+            ▼
+       Redis Broker
+            │
+            ▼
+      Celery Worker
+            │
+            ▼
+       Task Execution
+```
+
+This allows potentially slow or non-critical work to be handled asynchronously without unnecessarily blocking the API request.
+
+---
+
+## Celery Components
+
+### FastAPI
+
+The API creates the booking and, after a successful database transaction, dispatches the background task.
+
+### Redis Broker
+
+Redis acts as the **Celery message broker**, holding queued tasks until a worker consumes them.
+
+### Celery Worker
+
+The Celery worker continuously listens to Redis and executes registered background tasks.
+
+### Result Backend
+
+Redis is also configured as the Celery result backend so task execution results and states can be tracked.
+
+---
+
+# 📩 Booking Confirmation Task
+
+The first background workflow implemented in Bookify is booking confirmation processing.
+
+The booking flow is:
+
+```text
+POST /bookings
+       │
+       ▼
+Validate request
+       │
+       ▼
+Create booking
+       │
+       ▼
+Commit transaction
+       │
+       ▼
+Queue confirmation task
+       │
+       ▼
+Redis Broker
+       │
+       ▼
+Celery Worker
+       │
+       ▼
+Process confirmation
+```
+
+The important design principle is that the booking transaction is committed **before** the Celery task is queued.
+
+This prevents a background task from being dispatched for a booking that ultimately fails to persist.
+
+The current confirmation workflow simulates notification processing using application logging rather than an external email provider.
+
+---
+
+# 🔁 Celery Task Retries
+
+Background tasks can fail because of temporary infrastructure or application problems.
+
+Bookify uses Celery retry mechanisms to make background processing more resilient.
+
+The general workflow is:
+
+```text
+Task
+ ↓
+Failure
+ ↓
+Retry
+ ↓
+Failure
+ ↓
+Retry
+ ↓
+Failure
+ ↓
+Maximum retries reached
+ ↓
+Task marked as failed
+```
+
+The Celery configuration includes:
+
+* Automatic retry handling
+* Retry delay
+* Maximum retry attempts
+* Failure logging
+* Task execution logging
+
+This demonstrates a more production-oriented approach to asynchronous processing than simply executing a background function once.
+
+---
+
+# 📊 Task Observability
+
+Celery task execution is observable through application and worker logs.
+
+Typical task lifecycle events include:
+
+```text
+Task received
+Task started
+Task completed
+```
+
+Failure scenarios can also produce retry and failure information:
+
+```text
+Task failed
+Task retry scheduled
+Task retrying
+Maximum retries reached
+```
+
+Celery task states include:
+
+```text
+PENDING
+STARTED
+SUCCESS
+FAILURE
+RETRY
+```
+
+A dedicated monitoring interface such as Flower has intentionally not been added yet. The current implementation focuses on the core task processing architecture, retries, failure handling, logging, and automated testing.
+
 ---
 
 # 🛠️ Tech Stack
@@ -192,6 +406,16 @@ Create / Update / Delete Service
 * TTL-based caching
 * Cache invalidation
 
+## Background Processing
+
+* Celery
+* Redis message broker
+* Redis result backend
+* Asynchronous task processing
+* Task retries
+* Failure handling
+* Background task logging
+
 ## Authentication & Security
 
 * JWT
@@ -206,6 +430,7 @@ Create / Update / Delete Service
 * FastAPI TestClient
 * HTTPX
 * Redis integration tests
+* Celery task tests
 * Failure-path tests
 * Cache behavior tests
 * Performance benchmarking
@@ -238,6 +463,7 @@ saas-backend/
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── cache.py
+│   │   ├── celery.py
 │   │   ├── config.py
 │   │   ├── redis.py
 │   │   └── security.py
@@ -266,6 +492,10 @@ saas-backend/
 │   │   ├── service.py
 │   │   └── booking.py
 │   │
+│   ├── tasks/
+│   │   ├── __init__.py
+│   │   └── notifications.py
+│   │
 │   └── main.py
 │
 ├── alembic/
@@ -280,12 +510,15 @@ saas-backend/
 │   ├── test_security.py
 │   ├── test_services.py
 │   ├── test_bookings.py
+│   ├── test_celery.py
 │   ├── test_health.py
 │   └── test_redis.py
 │
+├── .dockerignore
 ├── .env
 ├── .gitignore
 ├── alembic.ini
+├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
 └── README.md
@@ -516,6 +749,8 @@ Redis configuration includes:
 * Port
 * Database number
 
+Redis is also used as the message broker and result backend for Celery background processing.
+
 ---
 
 ## Cache Key
@@ -668,6 +903,8 @@ Example request:
 
 The booking duration is derived from the selected service.
 
+After a successful booking transaction is committed, Bookify dispatches a booking confirmation task to Celery for asynchronous processing.
+
 ---
 
 ## Booking Availability
@@ -721,9 +958,38 @@ Authorization rules:
 
 ---
 
+# ❤️ Booking Confirmation Background Workflow
+
+After a booking is successfully committed to PostgreSQL:
+
+```text
+Booking Created
+      │
+      ▼
+Database Commit
+      │
+      ▼
+Celery Task Dispatch
+      │
+      ▼
+Redis Broker
+      │
+      ▼
+Celery Worker
+      │
+      ▼
+Booking Confirmation Processing
+```
+
+The API does not need to perform the confirmation processing synchronously as part of the booking request.
+
+This separates the core booking transaction from secondary background work and allows the application to scale asynchronous processing independently.
+
+---
+
 # 🧪 Testing
 
-The project contains automated tests covering authentication, security, role-based authorization, service CRUD, booking workflows, health checks, Redis integration, cache behavior, and failure paths.
+The project contains automated tests covering authentication, security, role-based authorization, service CRUD, booking workflows, health checks, Redis integration, cache behavior, Celery background processing, and failure paths.
 
 Run the complete test suite:
 
@@ -734,7 +1000,7 @@ python -m pytest
 Current test status:
 
 ```text
-68 passed, 1 warning
+75 passed, 1 warning
 ```
 
 ## Test Coverage
@@ -814,6 +1080,17 @@ Current test status:
 * Service cache invalidation after update
 * Service cache invalidation after deletion
 
+### Celery / Background Processing
+
+* Celery application configuration
+* Booking confirmation task registration
+* Booking confirmation task execution
+* Successful task execution
+* Task retry configuration
+* Task retry behavior after failure
+* Maximum retry handling
+* Booking flow dispatching the confirmation task
+
 ### Health / Failure Paths
 
 * Liveness health check
@@ -821,6 +1098,50 @@ Current test status:
 * Database unavailable handling
 * Redis availability
 * Redis failure handling
+
+---
+
+# 🩺 Health Checks
+
+Bookify exposes liveness and readiness endpoints.
+
+## Liveness
+
+```text
+GET /health
+```
+
+Example response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+The liveness endpoint confirms that the API process is running.
+
+---
+
+## Readiness
+
+```text
+GET /health/ready
+```
+
+The readiness endpoint verifies required infrastructure dependencies.
+
+Example healthy response:
+
+```json
+{
+  "status": "ok",
+  "database": "ok",
+  "redis": "ok"
+}
+```
+
+A readiness failure does not crash the application. Instead, the endpoint reports the unavailable dependency.
 
 ---
 
@@ -845,6 +1166,8 @@ Expected services include:
 ```text
 bookify-postgres
 bookify-redis
+bookify-api
+bookify-celery-worker
 ```
 
 ---
@@ -879,6 +1202,65 @@ PONG
 
 ---
 
+# 🔄 Running Celery
+
+The Celery worker can be started locally using:
+
+```bash
+celery -A app.core.celery worker --loglevel=info
+```
+
+The worker connects to Redis as the message broker and discovers the registered Bookify background tasks.
+
+The Docker Compose configuration also provides a dedicated Celery worker container.
+
+---
+
+# 🐳 Docker
+
+Bookify uses Docker Compose to run the application infrastructure.
+
+The current containerized architecture includes:
+
+```text
+┌───────────────────────┐
+│      FastAPI API      │
+│      bookify-api      │
+└───────────┬───────────┘
+            │
+            ├─────────────────────┐
+            │                     │
+            ▼                     ▼
+┌───────────────────────┐ ┌───────────────────────┐
+│      PostgreSQL       │ │        Redis          │
+│    bookify-postgres   │ │     bookify-redis     │
+└───────────────────────┘ └───────────┬───────────┘
+                                      │
+                                      ▼
+                            ┌───────────────────────┐
+                            │    Celery Worker      │
+                            │ bookify-celery-worker │
+                            └───────────────────────┘
+```
+
+The FastAPI and Celery worker containers run as the non-root `bookify` user.
+
+Verify the container user:
+
+```bash
+docker exec bookify-api whoami
+```
+
+Expected:
+
+```text
+bookify
+```
+
+The same applies to the Celery worker.
+
+---
+
 # ⚙️ Environment Variables
 
 Create a local `.env` file:
@@ -903,7 +1285,7 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 ---
 
-# ▶️ Running the API
+# ▶️ Running the API Locally
 
 Create and activate the virtual environment:
 
@@ -921,7 +1303,7 @@ pip install -r requirements.txt
 Start PostgreSQL and Redis:
 
 ```bash
-docker compose up -d
+docker compose up -d postgres redis
 ```
 
 Run database migrations:
@@ -940,6 +1322,37 @@ The API will be available at:
 
 ```text
 http://127.0.0.1:8000
+```
+
+---
+
+# 🚀 Running the Full Docker Stack
+
+Build and start the complete application:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+```text
+FastAPI
+PostgreSQL
+Redis
+Celery Worker
+```
+
+Verify the containers:
+
+```bash
+docker ps
+```
+
+The API should be available at:
+
+```text
+http://localhost:8000
 ```
 
 ---
@@ -1066,14 +1479,24 @@ The project will evolve into a complete production-style SaaS booking platform.
 * Redis-related automated tests
 * Performance comparison before/after caching
 
-### Stage 9 — Background Processing
+### Stage 9 — Background Processing with Celery ✅
 
-* Background job architecture
+* Celery integration
+* Redis message broker
+* Redis result backend
+* Background task architecture
 * Asynchronous task processing
-* Booking-related background workflows
-* Job retries
-* Failure handling
-* Scheduled/background tasks
+* Booking confirmation workflow
+* Celery worker
+* Task registration and discovery
+* Task retries
+* Retry delays
+* Maximum retry handling
+* Task failure handling
+* Background task logging
+* Celery task tests
+* Booking task dispatch testing
+* Dockerized Celery worker
 
 ### Stage 10 — DevOps & Cloud
 
@@ -1105,8 +1528,12 @@ This project is designed to demonstrate practical experience with:
 * Cache-aside architecture
 * Cache invalidation
 * Failure-tolerant application design
+* Celery background processing
+* Asynchronous task architecture
+* Redis-backed message queues
+* Task retries and failure handling
 * Docker
-* Background processing
+* Docker Compose
 * CI/CD
 * Cloud infrastructure
 * Observability
@@ -1130,4 +1557,3 @@ Each stage introduces a focused set of capabilities, followed by:
 6. GitHub version control
 
 This provides a clear development history and makes the repository useful as both a **portfolio project and an engineering learning exercise**.
-
