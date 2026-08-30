@@ -377,3 +377,34 @@ def test_services_require_authentication():
     response = client.get("/services")
 
     assert response.status_code == 401
+
+def test_create_service_rejects_whitespace_only_name():
+    user = create_test_user(UserRole.PROVIDER)
+    response = client.post(
+        "/services",
+        headers=get_auth_headers(user),
+        json={
+            "name": "   ",
+            "description": "Invalid service name",
+            "price": 500.00,
+            "duration_minutes": 30,
+        },
+    )
+
+    assert response.status_code == 422
+
+def test_create_service_strips_name_whitespace():
+    user = create_test_user(UserRole.PROVIDER)
+    response = client.post(
+        "/services",
+        headers=get_auth_headers(user),
+        json={
+            "name": "  Test Haircut  ",
+            "description": "Test service",
+            "price": 500.00,
+            "duration_minutes": 30,
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["name"] == "Test Haircut"

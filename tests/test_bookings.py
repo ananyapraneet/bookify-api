@@ -156,6 +156,37 @@ def test_booking_requires_authentication():
 
     assert response.status_code == 401
 
+def test_booking_rejects_invalid_service_id():
+
+    customer = create_test_user(UserRole.CUSTOMER)
+
+    response = client.post(
+        "/bookings",
+        headers=get_auth_headers(customer),
+        json={
+            "service_id": 0,
+            "booking_date": "2026-12-07",
+            "start_time": "10:00:00",
+        },
+    )
+
+    assert response.status_code == 422
+
+def test_booking_rejects_negative_service_id():
+
+    customer = create_test_user(UserRole.CUSTOMER)
+
+    response = client.post(
+        "/bookings",
+        headers=get_auth_headers(customer),
+        json={
+            "service_id": -1,
+            "booking_date": "2026-12-07",
+            "start_time": "10:00:00",
+        },
+    )
+
+    assert response.status_code == 422
 
 def test_booking_nonexistent_service():
 

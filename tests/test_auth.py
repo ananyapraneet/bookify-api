@@ -177,3 +177,26 @@ def test_auth_me_with_valid_token():
     assert data["email"] == email
     assert data["full_name"] == "Me Test"
     assert data["role"] == "customer"
+
+def test_register_rejects_whitespace_only_full_name():
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": f"validation-{uuid4()}@example.com",
+            "password": "TestPassword123",
+            "full_name": "   ",
+        },
+    )
+
+    assert response.status_code == 422
+
+def test_login_rejects_empty_password():
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": f"validation-{uuid4()}@example.com",
+            "password": "",
+        },
+    )
+
+    assert response.status_code == 422

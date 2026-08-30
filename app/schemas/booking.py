@@ -1,12 +1,10 @@
 from datetime import date, time, datetime
-
-from pydantic import BaseModel, ConfigDict
-
+from pydantic import BaseModel, ConfigDict, Field
 from app.models.booking import BookingStatus
 
 
 class BookingCreate(BaseModel):
-    service_id: int
+    service_id: int = Field(gt=0)
     booking_date: date
     start_time: time
 
