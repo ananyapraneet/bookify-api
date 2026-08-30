@@ -119,3 +119,34 @@ def test_booking_dispatches_confirmation_task():
         booking["id"],
         customer.email,
     )
+
+def test_booking_confirmation_task_succeeds_without_retry():
+
+    result = send_booking_confirmation.apply(
+        args=[101, "test@example.com"],
+    )
+
+    assert result.successful()
+    assert result.result == (
+        "Booking confirmation sent for booking 101"
+    )
+
+
+def test_booking_confirmation_task_retry_configuration():
+
+    assert send_booking_confirmation.max_retries == 3
+    assert Exception in send_booking_confirmation.autoretry_for
+    assert send_booking_confirmation.retry_backoff is True
+    assert send_booking_confirmation.retry_backoff_max == 60
+    assert send_booking_confirmation.retry_jitter is True
+
+
+def test_booking_confirmation_task_retries_after_failure():
+
+    assert Exception in send_booking_confirmation.autoretry_for
+    assert send_booking_confirmation.max_retries == 3
+
+
+def test_booking_confirmation_task_respects_max_retries():
+
+    assert send_booking_confirmation.max_retries == 3

@@ -47,6 +47,8 @@ services:
       context: .
     container_name: bookify-celery-worker
     command: celery -A app.core.celery worker --loglevel=info
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
