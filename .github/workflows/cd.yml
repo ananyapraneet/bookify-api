@@ -1,43 +1,33 @@
 name: Bookify CD
-
 on:
   push:
     branches:
       - main
-
 permissions:
   contents: read
   id-token: write
-
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: 977237383271.dkr.ecr.us-east-1.amazonaws.com/bookify-api
   EC2_INSTANCE_ID: i-0551c996927e05074
-
 jobs:
   deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::977237383271:role/bookify-github-actions
           aws-region: ${{ env.AWS_REGION }}
-
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -49,17 +39,16 @@ jobs:
             ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
       - name: Deploy to EC2 through SSM
         shell: bash
         run: |
-          set -euo pipefail
+          set -e
 
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${EC2_INSTANCE_ID}" \
             --document-name "AWS-RunShellScript" \
             --comment "Bookify deployment ${GITHUB_SHA}" \
-            --parameters "commands=[
+            --parameters commands="[
               \"cd /opt/bookify\",
               \"git fetch origin main\",
               \"git reset --hard origin/main\",
