@@ -1557,3 +1557,4 @@ Each stage introduces a focused set of capabilities, followed by:
 6. GitHub version control
 
 This provides a clear development history and makes the repository useful as both a **portfolio project and an engineering learning exercise**.
+
