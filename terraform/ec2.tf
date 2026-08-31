@@ -25,19 +25,62 @@ resource "aws_instance" "bookify" {
 
   iam_instance_profile = "bookify-ec2-role"
 
+  user_data_replace_on_change = false
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
   user_data = <<-EOF
-    #!/bin/bash
-    set -eux
+      #!/bin/bash
+      set -eux
 
-    dnf update -y
+      dnf update -y
 
-    dnf install -y docker git
+      # Core packages
+      dnf install -y docker git curl unzip
 
-    systemctl enable docker
-    systemctl start docker
+      # AWS CLI v2
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "/tmp/awscliv2.zip"
+      unzip -q /tmp/awscliv2.zip -d /tmp
+      /tmp/aws/install
+      rm -rf /tmp/aws /tmp/awscliv2.zip
 
-    usermod -aG docker ec2-user
-  EOF
+      # Docker
+      systemctl enable docker
+      systemctl start docker
+      usermod -aG docker ec2-user
+
+      # Docker Compose plugin
+      mkdir -p /usr/libexec/docker/cli-plugins
+
+      curl -SL \
+  	https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 \
+  	-o /usr/libexec/docker/cli-plugins/docker-compose
+
+      chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+
+      # Verify Docker Compose
+      docker compose version
+
+      # Application directory
+      mkdir -p /opt/bookify
+      chown -R ec2-user:ec2-user /opt/bookify
+
+      # Clone application repository
+      if [ ! -d /opt/bookify/.git ]; then
+        sudo -u ec2-user git clone \
+          https://github.com/ananyapraneet/bookify-api.git \
+          /opt/bookify
+      fi
+
+      chown -R ec2-user:ec2-user /opt/bookify
+
+      # Make deployment script executable
+      if [ -f /opt/bookify/scripts/deploy.sh ]; then
+        chmod +x /opt/bookify/scripts/deploy.sh
+      fi
+    EOF
 
   root_block_device {
     volume_type           = "gp3"
