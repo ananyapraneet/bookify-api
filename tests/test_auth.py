@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 from app.core.security import create_access_token
 from app.main import app
 
-
 client = TestClient(app)
 
 
@@ -136,9 +135,7 @@ def test_auth_me_without_token():
 def test_auth_me_with_invalid_token():
     response = client.get(
         "/auth/me",
-        headers={
-            "Authorization": "Bearer invalid.token.value"
-        },
+        headers={"Authorization": "Bearer invalid.token.value"},
     )
 
     assert response.status_code == 401
@@ -164,9 +161,7 @@ def test_auth_me_with_valid_token():
 
     response = client.get(
         "/auth/me",
-        headers={
-            "Authorization": f"Bearer {token}"
-        },
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 200
@@ -177,6 +172,7 @@ def test_auth_me_with_valid_token():
     assert data["email"] == email
     assert data["full_name"] == "Me Test"
     assert data["role"] == "customer"
+
 
 def test_register_rejects_whitespace_only_full_name():
     response = client.post(
@@ -189,6 +185,7 @@ def test_register_rejects_whitespace_only_full_name():
     )
 
     assert response.status_code == 422
+
 
 def test_login_rejects_empty_password():
     response = client.post(

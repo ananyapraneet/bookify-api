@@ -10,7 +10,6 @@ from app.models.booking import Booking, BookingStatus
 from app.models.service import Service
 from app.models.user import User, UserRole
 
-
 client = TestClient(app)
 
 
@@ -38,9 +37,7 @@ def create_test_user(role: UserRole) -> User:
 def get_auth_headers(user: User) -> dict[str, str]:
     token = create_access_token(str(user.id))
 
-    return {
-        "Authorization": f"Bearer {token}"
-    }
+    return {"Authorization": f"Bearer {token}"}
 
 
 def create_test_service(owner_id: int) -> Service:
@@ -138,9 +135,7 @@ def test_provider_cannot_create_booking():
     )
 
     assert response.status_code == 403
-    assert response.json()["detail"] == (
-        "Only customers can create bookings"
-    )
+    assert response.json()["detail"] == ("Only customers can create bookings")
 
 
 def test_booking_requires_authentication():
@@ -155,6 +150,7 @@ def test_booking_requires_authentication():
     )
 
     assert response.status_code == 401
+
 
 def test_booking_rejects_invalid_service_id():
 
@@ -172,6 +168,7 @@ def test_booking_rejects_invalid_service_id():
 
     assert response.status_code == 422
 
+
 def test_booking_rejects_negative_service_id():
 
     customer = create_test_user(UserRole.CUSTOMER)
@@ -187,6 +184,7 @@ def test_booking_rejects_negative_service_id():
     )
 
     assert response.status_code == 422
+
 
 def test_booking_nonexistent_service():
 
@@ -358,9 +356,7 @@ def test_customer_cannot_confirm_booking():
     )
 
     assert response.status_code == 403
-    assert response.json()["detail"] == (
-        "Customers can only cancel bookings"
-    )
+    assert response.json()["detail"] == ("Customers can only cancel bookings")
 
 
 def test_provider_can_cancel_booking():

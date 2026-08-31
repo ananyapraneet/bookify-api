@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.db.dependencies import get_db
+from app.models.booking import BookingStatus
 from app.models.user import User, UserRole
-from app.models.booking import Booking, BookingStatus
 from app.schemas.booking import BookingCreate, BookingResponse, BookingStatusUpdate
 from app.services.booking import (
     create_booking,
@@ -98,19 +98,23 @@ def get_booking_endpoint(
             detail="Booking not found",
         )
 
-    if current_user.role == UserRole.CUSTOMER:
-        if booking.customer_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to view this booking",
-            )
+    if (
+        current_user.role == UserRole.CUSTOMER
+        and booking.customer_id != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view this booking",
+        )
 
-    elif current_user.role == UserRole.PROVIDER:
-        if booking.service.owner_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to view this booking",
-            )
+    if (
+        current_user.role == UserRole.PROVIDER
+        and booking.service.owner_id != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view this booking",
+        )
 
     return booking
 

@@ -1,5 +1,4 @@
 from unittest.mock import patch
-
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -11,7 +10,6 @@ from app.main import app
 from app.models.service import Service
 from app.models.user import User, UserRole
 from app.tasks.notifications import send_booking_confirmation
-
 
 client = TestClient(app)
 
@@ -65,17 +63,12 @@ def get_auth_headers(user: User) -> dict[str, str]:
 
     token = create_access_token(str(user.id))
 
-    return {
-        "Authorization": f"Bearer {token}"
-    }
+    return {"Authorization": f"Bearer {token}"}
 
 
 def test_booking_confirmation_task_is_registered():
 
-    assert (
-        "app.tasks.notifications.send_booking_confirmation"
-        in celery_app.tasks
-    )
+    assert "app.tasks.notifications.send_booking_confirmation" in celery_app.tasks
 
 
 def test_booking_confirmation_task():
@@ -85,9 +78,7 @@ def test_booking_confirmation_task():
     )
 
     assert result.successful()
-    assert result.result == (
-        "Booking confirmation sent for booking 101"
-    )
+    assert result.result == ("Booking confirmation sent for booking 101")
 
 
 def test_booking_dispatches_confirmation_task():
@@ -97,10 +88,7 @@ def test_booking_dispatches_confirmation_task():
 
     service = create_test_service(provider.id)
 
-    with patch(
-        "app.api.routes.bookings.send_booking_confirmation.delay"
-    ) as mock_delay:
-
+    with patch("app.api.routes.bookings.send_booking_confirmation.delay") as mock_delay:
         response = client.post(
             "/bookings",
             json={
@@ -120,6 +108,7 @@ def test_booking_dispatches_confirmation_task():
         customer.email,
     )
 
+
 def test_booking_confirmation_task_succeeds_without_retry():
 
     result = send_booking_confirmation.apply(
@@ -127,9 +116,7 @@ def test_booking_confirmation_task_succeeds_without_retry():
     )
 
     assert result.successful()
-    assert result.result == (
-        "Booking confirmation sent for booking 101"
-    )
+    assert result.result == ("Booking confirmation sent for booking 101")
 
 
 def test_booking_confirmation_task_retry_configuration():

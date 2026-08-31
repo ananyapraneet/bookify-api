@@ -6,11 +6,11 @@ from redis.exceptions import RedisError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
-from app.core.redis import get_redis
 from app.core.cache import (
     SERVICES_LIST_CACHE_KEY,
     invalidate_services_cache,
 )
+from app.core.redis import get_redis
 from app.db.dependencies import get_db
 from app.models.user import User, UserRole
 from app.schemas.service import (
@@ -25,7 +25,6 @@ from app.services.service import (
     get_services,
     update_service,
 )
-
 
 router = APIRouter(
     prefix="/services",
@@ -62,6 +61,7 @@ async def create_service_endpoint(
     await invalidate_services_cache(redis)
 
     return service
+
 
 @router.get(
     "",
@@ -100,6 +100,7 @@ async def list_services(
 
     return services
 
+
 @router.get(
     "/{service_id}",
     response_model=ServiceResponse,
@@ -118,6 +119,7 @@ def get_service_endpoint(
         )
 
     return service
+
 
 @router.patch(
     "/{service_id}",
@@ -138,10 +140,7 @@ async def update_service_endpoint(
             detail="Service not found",
         )
 
-    if (
-        current_user.role != UserRole.ADMIN
-        and service.owner_id != current_user.id
-    ):
+    if current_user.role != UserRole.ADMIN and service.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to update this service",
@@ -156,6 +155,7 @@ async def update_service_endpoint(
     await invalidate_services_cache(redis)
 
     return updated_service
+
 
 @router.delete(
     "/{service_id}",
@@ -175,10 +175,7 @@ async def delete_service_endpoint(
             detail="Service not found",
         )
 
-    if (
-        current_user.role != UserRole.ADMIN
-        and service.owner_id != current_user.id
-    ):
+    if current_user.role != UserRole.ADMIN and service.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to delete this service",

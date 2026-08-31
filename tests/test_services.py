@@ -1,7 +1,6 @@
 import json
-
+from unittest.mock import AsyncMock
 from uuid import uuid4
-from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -11,7 +10,6 @@ from app.db.database import SessionLocal
 from app.main import app
 from app.models.service import Service
 from app.models.user import User, UserRole
-
 
 client = TestClient(app)
 
@@ -39,9 +37,7 @@ def create_test_user(role: UserRole) -> User:
 def get_auth_headers(user: User) -> dict[str, str]:
     token = create_access_token(str(user.id))
 
-    return {
-        "Authorization": f"Bearer {token}"
-    }
+    return {"Authorization": f"Bearer {token}"}
 
 
 def create_test_service(owner_id: int) -> Service:
@@ -125,10 +121,8 @@ def test_customer_can_list_services():
 
     data = response.json()
 
-    assert any(
-        item["id"] == service.id
-        for item in data
-    )
+    assert any(item["id"] == service.id for item in data)
+
 
 def test_list_services_uses_redis_cache_hit():
 
@@ -147,13 +141,9 @@ def test_list_services_uses_redis_cache_hit():
 
     mock_redis = AsyncMock()
 
-    mock_redis.get.return_value = json.dumps(
-        [cached_service]
-    )
+    mock_redis.get.return_value = json.dumps([cached_service])
 
-    app.dependency_overrides[
-        get_redis
-    ] = lambda: mock_redis
+    app.dependency_overrides[get_redis] = lambda: mock_redis
 
     try:
         response = client.get(
@@ -166,11 +156,10 @@ def test_list_services_uses_redis_cache_hit():
     assert response.status_code == 200
     assert response.json() == [cached_service]
 
-    mock_redis.get.assert_awaited_once_with(
-        "services:list"
-    )
+    mock_redis.get.assert_awaited_once_with("services:list")
 
     mock_redis.set.assert_not_awaited()
+
 
 def test_get_service():
     user = create_test_user(UserRole.PROVIDER)
@@ -423,6 +412,7 @@ def test_services_require_authentication():
 
     assert response.status_code == 401
 
+
 def test_create_service_rejects_whitespace_only_name():
     user = create_test_user(UserRole.PROVIDER)
     response = client.post(
@@ -437,6 +427,7 @@ def test_create_service_rejects_whitespace_only_name():
     )
 
     assert response.status_code == 422
+
 
 def test_create_service_strips_name_whitespace():
     user = create_test_user(UserRole.PROVIDER)
@@ -454,6 +445,7 @@ def test_create_service_strips_name_whitespace():
     assert response.status_code == 201
     assert response.json()["name"] == "Test Haircut"
 
+
 def test_create_service_invalidates_cache():
     user = create_test_user(UserRole.PROVIDER)
 
@@ -470,6 +462,7 @@ def test_create_service_invalidates_cache():
 
     assert response.status_code == 201
 
+
 def test_list_services_uses_database_on_redis_cache_miss():
     user = create_test_user(UserRole.CUSTOMER)
     service = create_test_service(user.id)
@@ -477,9 +470,7 @@ def test_list_services_uses_database_on_redis_cache_miss():
     mock_redis = AsyncMock()
     mock_redis.get.return_value = None
 
-    app.dependency_overrides[
-        get_redis
-    ] = lambda: mock_redis
+    app.dependency_overrides[get_redis] = lambda: mock_redis
 
     try:
         response = client.get(
@@ -493,14 +484,9 @@ def test_list_services_uses_database_on_redis_cache_miss():
 
     data = response.json()
 
-    assert any(
-        item["id"] == service.id
-        for item in data
-    )
+    assert any(item["id"] == service.id for item in data)
 
-    mock_redis.get.assert_awaited_once_with(
-        "services:list"
-    )
+    mock_redis.get.assert_awaited_once_with("services:list")
 
     mock_redis.set.assert_awaited_once()
 
@@ -508,6 +494,7 @@ def test_list_services_uses_database_on_redis_cache_miss():
 
     assert set_args.args[0] == "services:list"
     assert set_args.kwargs["ex"] == 60
+
 
 def test_update_service_invalidates_cache():
     provider = create_test_user(UserRole.PROVIDER)
@@ -544,9 +531,8 @@ def test_update_service_invalidates_cache():
 
     assert response.status_code == 200
 
-    mock_redis.delete.assert_awaited_once_with(
-        "services:list"
-    )
+    mock_redis.delete.assert_awaited_once_with("services:list")
+
 
 def test_delete_service_invalidates_cache():
     provider = create_test_user(UserRole.PROVIDER)
@@ -580,6 +566,4 @@ def test_delete_service_invalidates_cache():
 
     assert response.status_code == 204
 
-    mock_redis.delete.assert_awaited_once_with(
-        "services:list"
-    )
+    mock_redis.delete.assert_awaited_once_with("services:list")

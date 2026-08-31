@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-
     # PostgreSQL configuration
     postgres_user: str
     postgres_password: str
@@ -31,11 +30,7 @@ class Settings(BaseSettings):
 
     @property
     def redis_url(self) -> str:
-        return (
-            f"redis://"
-            f"{self.redis_host}:{self.redis_port}/"
-            f"{self.redis_db}"
-        )
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
     model_config = SettingsConfigDict(
         env_file=".env",

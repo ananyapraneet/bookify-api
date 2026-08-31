@@ -41,8 +41,8 @@ class Service(Base):
     )
 
     owner: Mapped["User"] = relationship(
-    	"User",
-    	back_populates="services",
+        "User",
+        back_populates="services",
     )
 
     owner_id: Mapped[int] = mapped_column(
@@ -65,7 +65,6 @@ class Service(Base):
     )
 
     bookings: Mapped[list["Booking"]] = relationship(
-    	"Booking",
-    	back_populates="service",
+        "Booking",
+        back_populates="service",
     )
-

@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum as SQLEnum, String
+from sqlalchemy import DateTime, String
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -46,9 +47,7 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(
         SQLEnum(
             UserRole,
-            values_callable=lambda enum_class: [
-                member.value for member in enum_class
-            ],
+            values_callable=lambda enum_class: [member.value for member in enum_class],
         ),
         nullable=False,
         default=UserRole.CUSTOMER,
@@ -61,11 +60,11 @@ class User(Base):
     )
 
     bookings: Mapped[list["Booking"]] = relationship(
-    	"Booking",
-    	back_populates="customer",
+        "Booking",
+        back_populates="customer",
     )
 
     services: Mapped[list["Service"]] = relationship(
-    	"Service",
-    	back_populates="owner",
+        "Service",
+        back_populates="owner",
     )

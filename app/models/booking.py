@@ -1,10 +1,16 @@
-from datetime import date, time, datetime, timezone
+from datetime import date, datetime, time, timezone
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, DateTime, Enum as SQLEnum, ForeignKey, Time
+from sqlalchemy import Date, DateTime, ForeignKey, Time
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.service import Service
+    from app.models.user import User
 
 
 class BookingStatus(str, Enum):
@@ -47,27 +53,25 @@ class Booking(Base):
     )
 
     status: Mapped[BookingStatus] = mapped_column(
-    	SQLEnum(
+        SQLEnum(
             BookingStatus,
-            values_callable=lambda enum_class: [
-            member.value for member in enum_class
-            ],
-    	),
-    	nullable=False,
-    	default=BookingStatus.PENDING,
+            values_callable=lambda enum_class: [member.value for member in enum_class],
+        ),
+        nullable=False,
+        default=BookingStatus.PENDING,
     )
 
     created_at: Mapped[datetime] = mapped_column(
-    	DateTime,
-    	default=lambda: datetime.now(timezone.utc),
-    	nullable=False,
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
     updated_at: Mapped[datetime] = mapped_column(
-    	DateTime,
-    	default=lambda: datetime.now(timezone.utc),
-    	onupdate=lambda: datetime.now(timezone.utc),
-    	nullable=False,
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
     customer: Mapped["User"] = relationship(

@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends
 from app.api.dependencies import require_role
 from app.models.user import User, UserRole
 
-
 router = APIRouter(
     prefix="/roles",
     tags=["Roles"],
@@ -12,9 +11,7 @@ router = APIRouter(
 
 @router.get("/customer")
 def customer_test(
-    current_user: User = Depends(
-        require_role(UserRole.CUSTOMER)
-    ),
+    current_user: User = Depends(require_role(UserRole.CUSTOMER)),
 ):
     return {
         "message": "Customer access granted",
@@ -25,9 +22,7 @@ def customer_test(
 
 @router.get("/provider")
 def provider_test(
-    current_user: User = Depends(
-        require_role(UserRole.PROVIDER)
-    ),
+    current_user: User = Depends(require_role(UserRole.PROVIDER)),
 ):
     return {
         "message": "Provider access granted",
@@ -38,9 +33,7 @@ def provider_test(
 
 @router.get("/admin")
 def admin_test(
-    current_user: User = Depends(
-        require_role(UserRole.ADMIN)
-    ),
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
 ):
     return {
         "message": "Admin access granted",

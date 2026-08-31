@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.models.booking import Booking, BookingStatus
 from app.models.service import Service
-from app.schemas.booking import BookingCreate
 from app.models.user import UserRole
+from app.schemas.booking import BookingCreate
+
 
 def create_booking(
     db: Session,
@@ -14,9 +15,7 @@ def create_booking(
     customer_id: int,
 ) -> Booking:
 
-    service = db.scalar(
-        select(Service).where(Service.id == booking_data.service_id)
-    )
+    service = db.scalar(select(Service).where(Service.id == booking_data.service_id))
 
     if service is None:
         raise ValueError("Service not found")
@@ -29,13 +28,10 @@ def create_booking(
         booking_data.start_time,
     )
 
-    end_datetime = start_datetime + timedelta(
-        minutes=service.duration_minutes
-    )
+    end_datetime = start_datetime + timedelta(minutes=service.duration_minutes)
 
     existing_booking = db.scalar(
-        select(Booking)
-        .where(
+        select(Booking).where(
             Booking.service_id == service.id,
             Booking.booking_date == booking_data.booking_date,
             Booking.status.in_(
@@ -67,6 +63,7 @@ def create_booking(
 
     return booking
 
+
 def get_bookings(
     db: Session,
     current_user_id: int,
@@ -76,21 +73,15 @@ def get_bookings(
     query = select(Booking)
 
     if current_user_role == UserRole.CUSTOMER:
-        query = query.where(
-            Booking.customer_id == current_user_id
-        )
+        query = query.where(Booking.customer_id == current_user_id)
 
     elif current_user_role == UserRole.PROVIDER:
         query = query.join(
             Service,
             Booking.service_id == Service.id,
-        ).where(
-            Service.owner_id == current_user_id
-        )
+        ).where(Service.owner_id == current_user_id)
 
-    return list(
-        db.scalars(query).all()
-    )
+    return list(db.scalars(query).all())
 
 
 def get_booking(
@@ -98,11 +89,8 @@ def get_booking(
     booking_id: int,
 ) -> Booking | None:
 
-    return db.scalar(
-        select(Booking).where(
-            Booking.id == booking_id
-        )
-    )
+    return db.scalar(select(Booking).where(Booking.id == booking_id))
+
 
 def update_booking_status(
     db: Session,

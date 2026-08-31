@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
+
 async def http_exception_handler(
     request: Request,
     exc: HTTPException,
@@ -26,6 +27,7 @@ async def http_exception_handler(
         },
     )
 
+
 async def validation_exception_handler(
     request: Request,
     exc: RequestValidationError,
@@ -44,6 +46,7 @@ async def validation_exception_handler(
             "errors": jsonable_encoder(exc.errors()),
         },
     )
+
 
 async def general_exception_handler(
     request: Request,

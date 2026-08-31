@@ -7,7 +7,6 @@ from app.db.database import SessionLocal
 from app.main import app
 from app.models.user import User, UserRole
 
-
 client = TestClient(app)
 
 
@@ -35,9 +34,7 @@ def create_test_user(role: UserRole) -> User:
 def get_auth_headers(user: User) -> dict[str, str]:
     token = create_access_token(str(user.id))
 
-    return {
-        "Authorization": f"Bearer {token}"
-    }
+    return {"Authorization": f"Bearer {token}"}
 
 
 def test_roles_without_token():

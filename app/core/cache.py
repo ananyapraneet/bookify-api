@@ -1,7 +1,6 @@
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
-
 SERVICES_LIST_CACHE_KEY = "services:list"
 
 

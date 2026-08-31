@@ -46,11 +46,7 @@ def get_services_by_owner(
     db: Session,
     owner_id: int,
 ) -> list[Service]:
-    statement = (
-        select(Service)
-        .where(Service.owner_id == owner_id)
-        .order_by(Service.id)
-    )
+    statement = select(Service).where(Service.owner_id == owner_id).order_by(Service.id)
 
     return list(db.scalars(statement).all())
 

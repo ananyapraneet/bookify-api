@@ -15,9 +15,6 @@ def send_booking_confirmation(
     customer_email: str,
 ) -> str:
 
-    print(
-        f"Sending booking confirmation for booking "
-        f"{booking_id} to {customer_email}"
-    )
+    print(f"Sending booking confirmation for booking {booking_id} to {customer_email}")
 
     return f"Booking confirmation sent for booking {booking_id}"

@@ -12,3 +12,4 @@ pytest-asyncio
 celery
 httpx
 email-validator
+ruff

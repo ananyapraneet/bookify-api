@@ -1,15 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
-
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
-
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.redis import get_redis
 from app.db.dependencies import get_db
-
 
 router = APIRouter(
     prefix="/health",

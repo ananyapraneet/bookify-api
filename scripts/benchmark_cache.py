@@ -120,31 +120,20 @@ def main():
     database_average = statistics.mean(database_timings)
     cache_average = statistics.mean(cache_timings)
 
-    improvement = (
-        (database_average - cache_average)
-        / database_average
-    ) * 100
+    improvement = ((database_average - cache_average) / database_average) * 100
 
     speedup = database_average / cache_average
 
     print("\nPerformance Comparison")
     print("======================")
 
-    print(
-        f"Database average: {database_average:.2f} ms"
-    )
+    print(f"Database average: {database_average:.2f} ms")
 
-    print(
-        f"Redis average:    {cache_average:.2f} ms"
-    )
+    print(f"Redis average:    {cache_average:.2f} ms")
 
-    print(
-        f"Latency reduction: {improvement:.2f}%"
-    )
+    print(f"Latency reduction: {improvement:.2f}%")
 
-    print(
-        f"Approx. speedup:  {speedup:.2f}x"
-    )
+    print(f"Approx. speedup:  {speedup:.2f}x")
 
 
 if __name__ == "__main__":

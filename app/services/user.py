@@ -7,9 +7,7 @@ from app.schemas.user import UserCreate
 
 
 def create_user(db: Session, user_data: UserCreate) -> User:
-    existing_user = db.scalar(
-        select(User).where(User.email == user_data.email)
-    )
+    existing_user = db.scalar(select(User).where(User.email == user_data.email))
 
     if existing_user:
         raise ValueError("Email already registered")
@@ -26,14 +24,13 @@ def create_user(db: Session, user_data: UserCreate) -> User:
 
     return user
 
+
 def authenticate_user(
     db: Session,
     email: str,
     password: str,
 ) -> User | None:
-    user = db.scalar(
-        select(User).where(User.email == email)
-    )
+    user = db.scalar(select(User).where(User.email == email))
 
     if user is None:
         return None

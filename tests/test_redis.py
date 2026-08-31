@@ -14,12 +14,13 @@ async def test_redis_connection():
     finally:
         await redis.aclose()
 
+
 def test_redis_unavailable():
-    from app.main import app
     from fastapi.testclient import TestClient
+    from redis.exceptions import RedisError
 
     from app.api.routes.health import get_redis
-    from redis.exceptions import RedisError
+    from app.main import app
 
     async def mock_get_redis():
         class FakeRedis:
