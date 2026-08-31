@@ -1,12 +1,21 @@
 FROM python:3.12-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN useradd --create-home --shell /bin/bash bookify
+RUN groupadd --gid 10001 bookify \
+    && useradd \
+        --uid 10001 \
+        --gid 10001 \
+        --create-home \
+        --shell /bin/bash \
+        bookify
 
 COPY --chown=bookify:bookify app ./app
 COPY --chown=bookify:bookify alembic.ini .
