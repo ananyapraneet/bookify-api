@@ -42,7 +42,7 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:ananyapraneet/bookify-api:ref:refs/heads/main"
+        "repo:ananyapraneet@67741043/bookify-api@1350575280:ref:refs/heads/main"
       ]
     }
   }
