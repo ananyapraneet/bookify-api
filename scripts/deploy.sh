@@ -86,12 +86,12 @@ echo "Starting application..."
 docker compose \
     --env-file "$ENV_FILE" \
     -f "$COMPOSE_FILE" \
-    up -d api celery_worker
+    up -d api celery_worker nginx
 
 echo "Waiting for API health check..."
 
 for attempt in {1..30}; do
-    if curl --fail --silent http://127.0.0.1:8000/health >/dev/null; then
+    if curl --fail --silent http://127.0.0.1/health >/dev/null; then
         echo "Deployment successful."
 
         docker compose \

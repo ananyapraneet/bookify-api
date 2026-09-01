@@ -1,4 +1,16 @@
 services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: bookify-nginx
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+
   api:
     image: ${ECR_REPOSITORY}:${IMAGE_TAG}
     container_name: bookify-api
@@ -19,8 +31,6 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ALGORITHM: ${JWT_ALGORITHM}
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES}
-    ports:
-      - "8000:8000"
     healthcheck:
       test:
         - CMD
