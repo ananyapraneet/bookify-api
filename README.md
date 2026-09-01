@@ -24,7 +24,26 @@ The project is complete for the current **portfolio and production-style enginee
 
 ---
 
-## Project Status
+# Live API
+
+The Bookify API is deployed on AWS EC2 and can be accessed through the public production endpoint.
+
+**Swagger UI:** http://75.101.214.88/docs
+
+The Swagger UI provides interactive documentation for the deployed API and allows API endpoints to be explored directly.
+
+Additional production endpoints:
+
+```text
+GET /health
+GET /health/ready
+GET /docs
+GET /redoc
+```
+
+---
+
+# Project Status
 
 **Status: Complete — Production Deployment & Observability Implemented**
 
@@ -68,7 +87,7 @@ The `/health/ready` endpoint verifies application readiness by checking both Pos
 # Production Architecture
 
 ```text
-                         Internet
+                        Internet
                             │
                             ▼
                     ┌─────────────────┐
@@ -80,29 +99,28 @@ The `/health/ready` endpoint verifies application readiness by checking both Pos
                              │
                              ▼
                     ┌─────────────────┐
-                    │     Nginx       │
-                    │ Reverse Proxy   │
+                    │      Nginx      │
+                    │  Reverse Proxy  │
                     └────────┬────────┘
                              │
                              ▼
                     ┌─────────────────┐
                     │    FastAPI      │
-                    │     API         │
+                    │      API        │
                     └──────┬────┬─────┘
                            │    │
-                 ┌─────────┘    └─────────┐
-                 ▼                        ▼
-        ┌─────────────────┐      ┌─────────────────┐
-        │   PostgreSQL    │      │      Redis      │
-        │    Database     │      │ Cache / Broker  │
-        └─────────────────┘      └────────┬────────┘
-                                          │
-                                          ▼
-                                 ┌─────────────────┐
-                                 │  Celery Worker   │
-                                 │ Background Jobs  │
-                                 └─────────────────┘
-
+              ┌────────────┘    └────────────┐
+              ▼                              ▼
+       ┌─────────────────┐          ┌─────────────────┐
+       │   PostgreSQL    │          │      Redis      │
+       │    Database     │          │ Cache / Broker  │
+       └─────────────────┘          └────────┬────────┘
+                                             │
+                                             ▼
+                                    ┌─────────────────┐
+                                    │  Celery Worker  │
+                                    │ Background Jobs │
+                                    └─────────────────┘
 
         Docker stdout/stderr
                 │
@@ -439,6 +457,32 @@ The configured log stream uses the EC2 instance ID.
 The centralized logging setup captures logs emitted by the production Docker services, including application and reverse-proxy activity.
 
 This makes production logs available without requiring direct access to individual container log files.
+
+---
+
+# CloudWatch Screenshots
+
+Screenshots of the production CloudWatch monitoring and logging configuration are included in the repository under:
+
+```text
+monitoring/cloudwatch/
+├── amazon-cloudwatch-agent.json
+├── cpu-utilization.png
+├── cloudwatch-alarms.png
+├── cloudwatch-logs.png
+├── cloudwatch-overview.png
+├── disk-utilization.png
+└── memory-utilization.png
+```
+
+The screenshots provide visual evidence of:
+
+* EC2 CPU utilization
+* Memory utilization
+* Disk utilization
+* CloudWatch alarms
+* Centralized Docker/application logs
+* Overall CloudWatch monitoring configuration
 
 ---
 
@@ -820,7 +864,13 @@ bookify-api/
 │
 ├── monitoring/
 │   └── cloudwatch/
-│       └── amazon-cloudwatch-agent.json
+│       ├── amazon-cloudwatch-agent.json
+│       ├── cpu-utilization.png
+│       ├── cloudwatch-alarms.png
+│       ├── cloudwatch-logs.png
+│       ├── cloudwatch-overview.png
+│       ├── disk-utilization.png
+│       └── memory-utilization.png
 │
 ├── nginx/
 │   └── nginx.conf
@@ -858,6 +908,7 @@ bookify-api/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── docker-compose.production.yml
+├── LICENSE
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md
@@ -1055,6 +1106,12 @@ Available endpoints:
 /redoc
 ```
 
+The production Swagger UI is available at:
+
+```text
+[http://75.101.214.88/docs](http://75.101.214.88/docs)
+```
+
 The OpenAPI schema is generated from the application's route and schema definitions.
 
 ---
@@ -1117,16 +1174,16 @@ The OpenAPI schema is generated from the application's route and schema definiti
 The project was developed incrementally through the following stages:
 
 ```text
-Stage 1  — Project Initialization                         ✅
-Stage 2  — Database Layer                                 ✅
-Stage 3  — Authentication                                 ✅
-Stage 4  — Service Management / Domain Design             ✅
-Stage 5  — Service CRUD                                   ✅
-Stage 6  — Booking System                                 ✅
-Stage 7  — Production Quality                             ✅
-Stage 8  — Redis / Caching                                ✅
-Stage 9  — DevOps & Cloud / Background Processing         ✅
-Stage 10 — Production Deployment & Observability          ✅
+Stage 1  — Project Initialization                       ✅
+Stage 2  — Database Layer                               ✅
+Stage 3  — Authentication                               ✅
+Stage 4  — Service Management / Domain Design            ✅
+Stage 5  — Service CRUD                                  ✅
+Stage 6  — Booking System                                ✅
+Stage 7  — Production Quality                            ✅
+Stage 8  — Redis / Caching                               ✅
+Stage 9  — DevOps & Cloud / Background Processing        ✅
+Stage 10 — Production Deployment & Observability         ✅
 ```
 
 ---
@@ -1267,4 +1324,12 @@ Bookify API has progressed from a local FastAPI application into a complete **pr
 * Production health/readiness checks
 
 The project is considered **complete for its current portfolio scope** and provides an end-to-end demonstration of backend engineering, cloud infrastructure, containerization, CI/CD, security and observability.
+
+---
+
+# License
+
+Bookify is licensed under the MIT License.
+
+Copyright (c) 2026 Ananya Praneet.
 
