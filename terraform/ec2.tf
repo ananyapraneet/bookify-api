@@ -14,7 +14,7 @@ resource "aws_key_pair" "bookify" {
 }
 
 resource "aws_instance" "bookify" {
-  ami           = data.aws_ssm_parameter.amazon_linux_2023_arm64.value
+  ami           = "ami-0cded71ff6ab7f608"
   instance_type = "t4g.small"
 
   subnet_id                   = aws_subnet.bookify_public.id
@@ -29,6 +29,10 @@ resource "aws_instance" "bookify" {
 
   lifecycle {
     create_before_destroy = true
+
+    ignore_changes = [
+      ami
+    ]
   }
 
   user_data = <<-EOF

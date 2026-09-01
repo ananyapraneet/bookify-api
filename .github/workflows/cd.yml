@@ -84,7 +84,8 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "Bookify deployment ${GITHUB_SHA}" \
             --parameters commands="[
-              \"cd /opt/bookify\",
+              \"git config --global --add safe.directory /opt/bookify\",
+	      \"cd /opt/bookify\",
               \"git fetch origin main\",
               \"git reset --hard origin/main\",
               \"export ECR_REPOSITORY=${ECR_REPOSITORY}\",
