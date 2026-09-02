@@ -463,27 +463,38 @@ This makes production logs available without requiring direct access to individu
 
 # CloudWatch Screenshots
 
-Screenshots of the production CloudWatch monitoring and logging configuration are included in the repository under:
+Screenshots of the production CloudWatch monitoring and logging configuration are included below.
 
-```text
-monitoring/cloudwatch/
-├── amazon-cloudwatch-agent.json
-├── cpu-utilization.png
-├── cloudwatch-alarms.png
-├── cloudwatch-logs.png
-├── cloudwatch-overview.png
-├── disk-utilization.png
-└── memory-utilization.png
-```
+### CloudWatch Overview
+
+![CloudWatch Overview](monitoring/cloudwatch/cloudwatch-overview.png)
+
+### CPU & Memory Utilization
+
+![CPU Utilization](monitoring/cloudwatch/cpu-utilization.png)
+
+![Memory Utilization](monitoring/cloudwatch/memory-utilization.png)
+
+### Disk Utilization
+
+![Disk Utilization](monitoring/cloudwatch/disk-utilization.png)
+
+![CloudWatch Alarms](monitoring/cloudwatch/cloudwatch-alarms.png)
+
+### CloudWatch Logs
+
+![CloudWatch Logs](monitoring/cloudwatch/cloudwatch-logs.png)
 
 The screenshots provide visual evidence of:
 
-* EC2 CPU utilization
-* Memory utilization
-* Disk utilization
-* CloudWatch alarms
-* Centralized Docker/application logs
-* Overall CloudWatch monitoring configuration
+- EC2 CPU utilization
+- Memory utilization
+- Disk utilization
+- CloudWatch alarms
+- Centralized Docker/application logs
+- Overall CloudWatch monitoring configuration
+
+**Configuration:** `monitoring/cloudwatch/amazon-cloudwatch-agent.json`
 
 ---
 
