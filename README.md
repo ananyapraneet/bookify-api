@@ -40,6 +40,7 @@ GET /health/ready
 GET /docs
 GET /redoc
 ```
+> **Note:** The production URL is currently active and working. Since the API is hosted on an AWS EC2 instance, availability may vary and the endpoint may not always be accessible.
 
 ---
 
