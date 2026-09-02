@@ -1,5 +1,9 @@
 # Bookify API
 
+[![CI](https://github.com/ananyapraneet/bookify-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ananyapraneet/bookify-api/actions/workflows/ci.yml)
+[![CD](https://github.com/ananyapraneet/bookify-api/actions/workflows/cd.yml/badge.svg)](https://github.com/ananyapraneet/bookify-api/actions/workflows/cd.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A production-style **SaaS backend for a service booking and appointment management platform**, built with FastAPI and PostgreSQL.
 
 The project was developed incrementally with a focus on:
