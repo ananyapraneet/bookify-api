@@ -1333,5 +1333,3 @@ The project is considered **complete for its current portfolio scope** and provi
 Bookify is licensed under the MIT License.
 
 Copyright (c) 2026 Ananya Praneet.
-
----

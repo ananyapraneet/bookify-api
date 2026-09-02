@@ -86,7 +86,7 @@ echo "Starting application..."
 docker compose \
     --env-file "$ENV_FILE" \
     -f "$COMPOSE_FILE" \
-    up -d api celery_worker nginx
+    up -d --force-recreate api celery_worker nginx
 
 echo "Waiting for API health check..."
 
