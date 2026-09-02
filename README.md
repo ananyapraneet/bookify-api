@@ -1118,11 +1118,10 @@ Available endpoints:
 /redoc
 ```
 
+
 The production Swagger UI is available at:
 
-```text
-[http://75.101.214.88/docs](http://75.101.214.88/docs)
-```
+http://75.101.214.88/docs
 
 The OpenAPI schema is generated from the application's route and schema definitions.
 
